@@ -389,6 +389,10 @@ const ArchitectureMap: React.FC<ArchitectureMapProps> = ({ files }) => {
   // Drag state
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  // Pan state
+  const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -499,28 +503,47 @@ const ArchitectureMap: React.FC<ArchitectureMapProps> = ({ files }) => {
     const mouseX = e.clientX;
     const mouseY = e.clientY;
     setDraggingNodeId(node.id);
-    setDragOffset({ x: mouseX - node.x, y: mouseY - node.y });
+    setDragOffset({ x: mouseX - node.x - panOffset.x, y: mouseY - node.y - panOffset.y });
     // Disable text selection
     document.body.style.userSelect = 'none';
   };
 
+  // Mouse event handlers for background panning
+  const handleSvgMouseDown = (e: React.MouseEvent) => {
+    // Only start panning if not clicking on a node
+    if (e.target instanceof SVGRectElement) return;
+    setIsPanning(true);
+    setPanStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
+    document.body.style.userSelect = 'none';
+  };
+
   const handleSvgMouseMove = (e: React.MouseEvent) => {
-    if (!draggingNodeId) return;
-    const mouseX = e.clientX;
-    const mouseY = e.clientY;
-    setNodes(prevNodes =>
-      prevNodes.map(node =>
-        node.id === draggingNodeId
-          ? { ...node, x: mouseX - dragOffset.x, y: mouseY - dragOffset.y }
-          : node
-      )
-    );
+    if (draggingNodeId) {
+      const mouseX = e.clientX;
+      const mouseY = e.clientY;
+      setNodes(prevNodes =>
+        prevNodes.map(node =>
+          node.id === draggingNodeId
+            ? { ...node, x: mouseX - dragOffset.x - panOffset.x, y: mouseY - dragOffset.y - panOffset.y }
+            : node
+        )
+      );
+    } else if (isPanning) {
+      setPanOffset({
+        x: e.clientX - panStart.x,
+        y: e.clientY - panStart.y
+      });
+    }
   };
 
   const handleSvgMouseUp = () => {
     if (draggingNodeId) {
       setDraggingNodeId(null);
       // Re-enable text selection
+      document.body.style.userSelect = '';
+    }
+    if (isPanning) {
+      setIsPanning(false);
       document.body.style.userSelect = '';
     }
   };
@@ -574,12 +597,42 @@ const ArchitectureMap: React.FC<ArchitectureMapProps> = ({ files }) => {
       </div>
       {/* Map Container */}
       <div className="flex">
-        <div ref={containerRef} className="flex-1" style={{ height: '700px' }}>
+        <div ref={containerRef} className="flex-1" style={{ height: '700px', position: 'relative' }}>
+          {/* Legend floating box */}
+          <div
+            style={{ position: 'absolute', top: 16, left: 16, zIndex: 10 }}
+            className="bg-white rounded-lg shadow-md p-3 w-40 min-w-[10rem] border border-gray-200"
+          >
+            <h5 className="font-medium text-gray-700 mb-2">Legend</h5>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center">
+                <Package size={14} className="mr-2 text-blue-600" />
+                <span>Services/APIs</span>
+              </div>
+              <div className="flex items-center">
+                <FileText size={14} className="mr-2 text-green-600" />
+                <span>Components</span>
+              </div>
+              <div className="flex items-center">
+                <FileText size={14} className="mr-2" style={{ color: '#f59e0b' }} />
+                <span>Pages</span>
+              </div>
+              <div className="flex items-center">
+                <Settings size={14} className="mr-2 text-purple-600" />
+                <span>Utilities</span>
+              </div>
+              <div className="flex items-center">
+                <Folder size={14} className="mr-2 text-gray-600" />
+                <span>Grouped Files</span>
+              </div>
+            </div>
+          </div>
           <svg
             ref={svgRef}
             width={dimensions.width}
             height={dimensions.height}
             className="border-r"
+            onMouseDown={handleSvgMouseDown}
             onMouseMove={handleSvgMouseMove}
             onMouseUp={handleSvgMouseUp}
             onMouseLeave={handleSvgMouseUp}
@@ -590,16 +643,14 @@ const ArchitectureMap: React.FC<ArchitectureMapProps> = ({ files }) => {
                 {connections.map((conn, index) => {
                   const fromNode = nodes.find(n => n.id === conn.from);
                   const toNode = nodes.find(n => n.id === conn.to);
-                  
                   if (!fromNode || !toNode) return null;
-                  
                   return (
                     <line
                       key={index}
-                      x1={fromNode.x + fromNode.width / 2}
-                      y1={fromNode.y + fromNode.height / 2}
-                      x2={toNode.x + toNode.width / 2}
-                      y2={toNode.y + toNode.height / 2}
+                      x1={fromNode.x + fromNode.width / 2 + panOffset.x}
+                      y1={fromNode.y + fromNode.height / 2 + panOffset.y}
+                      x2={toNode.x + toNode.width / 2 + panOffset.x}
+                      y2={toNode.y + toNode.height / 2 + panOffset.y}
                       stroke="#cbd5e1"
                       strokeWidth="1.5"
                       opacity="0.6"
@@ -634,8 +685,8 @@ const ArchitectureMap: React.FC<ArchitectureMapProps> = ({ files }) => {
                 return (
                   <g key={node.id}>
                     <rect
-                      x={node.x}
-                      y={node.y}
+                      x={node.x + panOffset.x}
+                      y={node.y + panOffset.y}
                       width={node.width}
                       height={node.height}
                       fill={colors.bg}
@@ -649,8 +700,8 @@ const ArchitectureMap: React.FC<ArchitectureMapProps> = ({ files }) => {
                     
                     {/* Node icon */}
                     <foreignObject
-                      x={node.x + 8}
-                      y={node.y + 8}
+                      x={node.x + 8 + panOffset.x}
+                      y={node.y + 8 + panOffset.y}
                       width="16"
                       height="16"
                     >
@@ -663,8 +714,8 @@ const ArchitectureMap: React.FC<ArchitectureMapProps> = ({ files }) => {
                     
                     {/* Node text */}
                     <text
-                      x={node.x + 28}
-                      y={node.y + 18}
+                      x={node.x + 28 + panOffset.x}
+                      y={node.y + 18 + panOffset.y}
                       fontSize="12"
                       fontWeight="500"
                       fill={colors.text}
@@ -676,8 +727,8 @@ const ArchitectureMap: React.FC<ArchitectureMapProps> = ({ files }) => {
                     {/* File count for groups */}
                     {node.fileCount && (
                       <text
-                        x={node.x + 28}
-                        y={node.y + 35}
+                        x={node.x + 28 + panOffset.x}
+                        y={node.y + 35 + panOffset.y}
                         fontSize="10"
                         fill={colors.text}
                         opacity="0.7"
@@ -740,32 +791,6 @@ const ArchitectureMap: React.FC<ArchitectureMapProps> = ({ files }) => {
           ) : (
             <div className="text-center text-gray-500">
               <p className="mb-4">Click on a node to see details</p>
-              
-              <div className="space-y-3 text-sm">
-                <h5 className="font-medium text-gray-700">Legend</h5>
-                <div className="space-y-2">
-                  <div className="flex items-center">
-                    <Package size={14} className="mr-2 text-blue-600" />
-                    <span>Services/APIs</span>
-                  </div>
-                  <div className="flex items-center">
-                    <FileText size={14} className="mr-2 text-green-600" />
-                    <span>Components</span>
-                  </div>
-                  <div className="flex items-center">
-                    <FileText size={14} className="mr-2 text-orange-600" />
-                    <span>Pages</span>
-                  </div>
-                  <div className="flex items-center">
-                    <Settings size={14} className="mr-2 text-purple-600" />
-                    <span>Utilities</span>
-                  </div>
-                  <div className="flex items-center">
-                    <Folder size={14} className="mr-2 text-gray-600" />
-                    <span>Grouped Files</span>
-                  </div>
-                </div>
-              </div>
             </div>
           )}
           
