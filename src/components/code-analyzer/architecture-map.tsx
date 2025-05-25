@@ -7,6 +7,10 @@ import { Folder } from 'lucide-react';
 import { Download } from 'lucide-react';
 import { Eye } from 'lucide-react';
 import { EyeOff } from 'lucide-react';
+import * as babelParser from '@babel/parser';
+import traverse from '@babel/traverse';
+import type { NodePath } from '@babel/traverse';
+import * as t from '@babel/types';
 
 // Types
 interface ArchitectureNode {
@@ -94,6 +98,81 @@ const categorizeFile = (path: string): { category: string; importance: number } 
   
   // OTHER
   return { category: 'other', importance: 3 };
+};
+
+// File categorization rules
+const categorizeByAST = (content: string, path: string): { category: string; importance: number } => {
+  // Path-based quick checks for dependencies
+  const pathParts = path.split('/');
+  if (pathParts.includes('node_modules') || pathParts.includes('.git')) {
+    return { category: 'dependencies', importance: 1 };
+  }
+  if (path.match(/\/(pages|app)\//) || path.toLowerCase().includes('page') || path.toLowerCase().includes('route')) {
+    return { category: 'page', importance: 9 };
+  }
+  if (path.match(/\/(services)\//) || path.toLowerCase().includes('service') || path.toLowerCase().includes('api')) {
+    return { category: 'service', importance: 8 };
+  }
+  if (path.endsWith('.json')) {
+    try {
+      const json = JSON.parse(content);
+      if (json && typeof json === 'object' && (
+        json.config || json.configuration || json.settings || json.env || json.compilerOptions
+      )) {
+        return { category: 'config', importance: 2 };
+      }
+    } catch {}
+  }
+  // Try to parse JS/TS
+  try {
+    const ast = babelParser.parse(content, {
+      sourceType: 'unambiguous',
+      plugins: ['jsx', 'typescript'],
+    });
+    let foundJSX = false;
+    let foundUseFunction = false;
+    let foundService = false;
+    let foundType = false;
+    let foundTest = false;
+    let foundStyle = false;
+    traverse(ast, {
+      JSXElement() { foundJSX = true; },
+      FunctionDeclaration(path: NodePath<t.FunctionDeclaration>) {
+        if (path.node.id && path.node.id.name && path.node.id.name.startsWith('use')) {
+          foundUseFunction = true;
+        }
+      },
+      ImportDeclaration(path: NodePath<t.ImportDeclaration>) {
+        const val = path.node.source.value;
+        if (typeof val === 'string') {
+          if (val.includes('axios') || val.includes('fetch')) foundService = true;
+          if (val.match(/\.css$|\.scss$|style/)) foundStyle = true;
+        }
+      },
+      CallExpression(path: NodePath<t.CallExpression>) {
+        if (path.node.callee.type === 'Identifier') {
+          const name = path.node.callee.name;
+          if (['describe', 'test', 'expect', 'it'].includes(name)) foundTest = true;
+          if (name === 'fetch' || name === 'axios') foundService = true;
+        }
+      },
+      TSInterfaceDeclaration() { foundType = true; },
+      TSTypeAliasDeclaration() { foundType = true; },
+      VariableDeclarator(path: NodePath<t.VariableDeclarator>) {
+        if (path.node.id.type === 'Identifier' && path.node.id.name.startsWith('use')) {
+          foundUseFunction = true;
+        }
+      },
+    });
+    if (foundJSX) return { category: 'component', importance: 8 };
+    if (foundUseFunction) return { category: 'utility', importance: 7 };
+    if (foundService) return { category: 'service', importance: 8 };
+    if (foundType) return { category: 'types', importance: 5 };
+    if (foundTest) return { category: 'tests', importance: 3 };
+    if (foundStyle) return { category: 'styles', importance: 4 };
+  } catch {}
+  // Fallback to path-based
+  return categorizeFile(path);
 };
 
 // Extract dependencies between files
@@ -201,23 +280,27 @@ const resolvePath = (currentPath: string, importPath: string): string => {
 };
 
 // Build simplified architecture tree
-const buildArchitectureTree = (files: Array<{ name: string; path: string; type: string; size: number; file: File }>): ArchitectureNode[] => {
+const buildArchitectureTree = async (files: Array<{ name: string; path: string; type: string; size: number; file: File }>): Promise<ArchitectureNode[]> => {
   const categorizedFiles = new Map<string, Array<{ name: string; path: string; importance: number }>>();
   
   // Categorize all files
-  files.forEach(file => {
-    const { category, importance } = categorizeFile(file.path);
-    
+  for (const file of files) {
+    let content = '';
+    try {
+      if (typeof file.file.text === 'function') {
+        content = await file.file.text();
+      }
+    } catch {}
+    const { category, importance } = categorizeByAST(content, file.path);
     if (!categorizedFiles.has(category)) {
       categorizedFiles.set(category, []);
     }
-    
     categorizedFiles.get(category)!.push({
       name: file.name,
       path: file.path,
       importance
     });
-  });
+  }
   
   // DEBUG: Log category counts
   const catCounts: Record<string, number> = {};
@@ -405,11 +488,11 @@ const ArchitectureMap: React.FC<ArchitectureMapProps> = ({ files }) => {
     
     try {
       // Build simplified architecture tree
-      const architectureNodes = buildArchitectureTree(files);
+      const architectureNodes = await buildArchitectureTree(files);
       
       // Lower importance threshold to 5
       const importantFiles = files.filter(file => {
-        const { importance } = categorizeFile(file.path);
+        const { importance } = categorizeByAST('', file.path);
         return importance >= 5;
       });
       
