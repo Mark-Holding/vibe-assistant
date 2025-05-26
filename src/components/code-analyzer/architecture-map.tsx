@@ -225,12 +225,12 @@ const extractConnections = async (files: Array<{ name: string; path: string; fil
               if (targetFile) break;
             }
           }
-          if (targetFile) {
-            connections.push({
-              from: file.path,
-              to: targetFile.path,
-              type: 'import'
-            });
+        if (targetFile) {
+          connections.push({
+            from: file.path,
+            to: targetFile.path,
+            type: 'import'
+          });
           }
         }
       });
@@ -254,7 +254,7 @@ const extractImports = (content: string): string[] => {
   let match2;
   while ((match2 = importRegex2.exec(content)) !== null) {
     imports.push(match2[1]);
-  }
+    }
   // Deduplicate
   return Array.from(new Set(imports));
 };
@@ -430,7 +430,7 @@ const layoutNodes = (nodes: ArchitectureNode[], width: number, height: number): 
     node.x = width / 2 - ((services.length - 1) * serviceSpacing) / 2 + i * serviceSpacing;
     node.y = serviceY;
   });
-
+  
   // --- Components: Center grid ---
   const compStartY = 320;
   const componentsPerRow = Math.min(6, components.length);
@@ -469,7 +469,7 @@ const layoutNodes = (nodes: ArchitectureNode[], width: number, height: number): 
     node.x = width / 2 - ((groups.length - 1) * groupSpacing) / 2 + i * groupSpacing;
     node.y = groupY;
   });
-
+  
   return nodes;
 };
 

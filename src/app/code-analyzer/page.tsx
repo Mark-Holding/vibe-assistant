@@ -1,57 +1,33 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { BarChart3, Folder, Network, Search } from "lucide-react";
+import { BarChart3, Folder, Network } from "lucide-react";
 import { useFileAnalysis } from "../../hooks/useFileAnalysis";
-import { useFileTree } from "../../hooks/useFileTree";
 import {
   FileUploader,
-  FileTree,
-  FileViewer,
-  ProjectOverview,
-  SearchPanel,
   DependencyVisualizer,
   ArchitectureMap,
 } from "../../components/code-analyzer";
 import { Button } from "../../components/ui/Button";
 import { FileData } from "../../types/code-analyzer";
-import { readFileContent } from "../../utils/fileUtils";
 
 export default function CodeAnalyzerPage() {
   const [activeTab, setActiveTab] = useState<
-    "overview" | "files" | "search" | "dependencies"
-  >("overview");
-  const [searchTerm, setSearchTerm] = useState("");
-
-  console.log(
-    "CodeAnalyzerPage render - activeTab:",
-    activeTab,
-    "searchTerm:",
-    searchTerm
-  );
+    "fileStructure" | "codeAnalysis" | "designSystem" | "dependencies" | "codebaseMap"
+  >("fileStructure");
 
   const {
     files,
-    selectedFile,
-    fileTree,
-    stats,
     handleFileUpload,
-    handleFileSelect,
   } = useFileAnalysis();
-
-  const { expandedFolders, toggleFolder } = useFileTree();
 
   // Directly handle FileData[]
   const onFilesUploaded = (uploadedFiles: FileData[]) => {
     handleFileUpload(uploadedFiles);
   };
 
-  const handleSearchChange = useCallback((term: string) => {
-    setSearchTerm(term);
-  }, []);
-
   const handleTabChange = useCallback(
-    (tab: "overview" | "files" | "search" | "dependencies") => {
+    (tab: "fileStructure" | "codeAnalysis" | "designSystem" | "dependencies" | "codebaseMap") => {
       setActiveTab(tab);
     },
     []
@@ -59,12 +35,10 @@ export default function CodeAnalyzerPage() {
 
   // Utility to filter relevant source files
   const isRelevantSourceFile = (file: FileData) => {
-    // First validate that we have a valid file with a path
     if (!file || !file.path) {
       console.warn('Invalid file object:', file);
       return false;
     }
-
     const excludeDirs = [
       '/node_modules/', '/.git/', '/dist/', '/build/', '/out/', '/.next/', '/.vercel/'
     ];
@@ -72,7 +46,6 @@ export default function CodeAnalyzerPage() {
     const allowedExts = [
       'js', 'jsx', 'ts', 'tsx', 'json', 'css', 'scss', 'md'
     ];
-    // Exclude hidden/system files and excluded directories
     if (
       file.path.startsWith('.') ||
       file.name.startsWith('.') ||
@@ -80,14 +53,12 @@ export default function CodeAnalyzerPage() {
     ) {
       return false;
     }
-    // Only allow certain extensions
     if (!ext || !allowedExts.includes(ext)) {
       return false;
     }
     return true;
   };
 
-  // Filter files before passing to analyzer components
   const filteredFiles = files.filter(isRelevantSourceFile);
 
   return (
@@ -110,28 +81,28 @@ export default function CodeAnalyzerPage() {
           <div className="max-w-7xl mx-auto px-4">
             <nav className="flex space-x-8">
               <Button
-                variant={activeTab === "overview" ? "primary" : "outline"}
-                onClick={() => handleTabChange("overview")}
-                className="flex items-center"
-              >
-                <BarChart3 size={20} className="mr-2" />
-                Overview
-              </Button>
-              <Button
-                variant={activeTab === "files" ? "primary" : "outline"}
-                onClick={() => handleTabChange("files")}
+                variant={activeTab === "fileStructure" ? "primary" : "outline"}
+                onClick={() => handleTabChange("fileStructure")}
                 className="flex items-center"
               >
                 <Folder size={20} className="mr-2" />
-                Files
+                File Structure
               </Button>
               <Button
-                variant={activeTab === "search" ? "primary" : "outline"}
-                onClick={() => handleTabChange("search")}
+                variant={activeTab === "codeAnalysis" ? "primary" : "outline"}
+                onClick={() => handleTabChange("codeAnalysis")}
                 className="flex items-center"
               >
-                <Search size={20} className="mr-2" />
-                Search
+                <BarChart3 size={20} className="mr-2" />
+                Code Analysis
+              </Button>
+              <Button
+                variant={activeTab === "designSystem" ? "primary" : "outline"}
+                onClick={() => handleTabChange("designSystem")}
+                className="flex items-center"
+              >
+                🎨
+                <span className="ml-2">Design System</span>
               </Button>
               <Button
                 variant={activeTab === "dependencies" ? "primary" : "outline"}
@@ -141,6 +112,14 @@ export default function CodeAnalyzerPage() {
                 <Network size={20} className="mr-2" />
                 Dependencies
               </Button>
+              <Button
+                variant={activeTab === "codebaseMap" ? "primary" : "outline"}
+                onClick={() => handleTabChange("codebaseMap")}
+                className="flex items-center"
+              >
+                🗺️
+                <span className="ml-2">Codebase Map</span>
+              </Button>
             </nav>
           </div>
         </div>
@@ -148,49 +127,33 @@ export default function CodeAnalyzerPage() {
 
       {files.length > 0 && (
         <div className="max-w-7xl mx-auto px-4 py-6">
-          {/* Dependencies and Overview tabs use full width */}
-          {(activeTab === "dependencies" || activeTab === "overview") ? (
+          {/* Tab content */}
+          {activeTab === "dependencies" ? (
             <div className="w-full">
-              {activeTab === "dependencies" ? (
-                <DependencyVisualizer files={filteredFiles} />
-              ) : (
-                <ArchitectureMap files={filteredFiles} />
-              )}
+              <DependencyVisualizer files={filteredFiles} />
             </div>
-          ) : (
-            <div className="grid grid-cols-12 gap-6">
-              {/* Main Content */}
-              <div className="col-span-8">
-                <FileViewer
-                  file={selectedFile}
-                  readFileContent={readFileContent}
-                />
-              </div>
-              {/* Sidebar */}
-              <div className="col-span-4">
-                {activeTab === "overview" && <ProjectOverview stats={stats} />}
-                {activeTab === "files" && (
-                  <FileTree
-                    tree={fileTree}
-                    selectedFile={selectedFile}
-                    expandedFolders={expandedFolders}
-                    onFileSelect={handleFileSelect}
-                    onFolderToggle={toggleFolder}
-                  />
-                )}
-                {activeTab === "search" && (
-                  <SearchPanel
-                    files={filteredFiles}
-                    onFileSelect={handleFileSelect}
-                    searchTerm={searchTerm}
-                    onSearchChange={handleSearchChange}
-                  />
-                )}
+          ) : activeTab === "codebaseMap" ? (
+            <div className="w-full">
+              <ArchitectureMap files={filteredFiles} />
+            </div>
+          ) : activeTab === "fileStructure" ? (
+            <div className="w-full"></div>
+          ) : activeTab === "codeAnalysis" ? (
+            <div className="w-full"></div>
+          ) : activeTab === "designSystem" ? (
+            <div className="w-full">
+              <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+                <h3 className="text-lg font-medium mb-2">Design System</h3>
+                <p>This is a placeholder for the Design System tab.</p>
               </div>
             </div>
-          )}
+          ) : null}
         </div>
       )}
     </div>
   );
 }
+
+
+
+
