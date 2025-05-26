@@ -11,6 +11,7 @@ import * as babelParser from '@babel/parser';
 import traverse from '@babel/traverse';
 import type { NodePath } from '@babel/traverse';
 import * as t from '@babel/types';
+import type { FileData } from '../../types/code-analyzer';
 
 // Types
 interface ArchitectureNode {
@@ -413,7 +414,6 @@ const layoutNodes = (nodes: ArchitectureNode[], width: number, height: number): 
   const components = nodes.filter(n => n.type === 'component');
   const utilities = nodes.filter(n => n.type === 'utility');
   const groups = nodes.filter(n => n.type === 'group');
-  const padding = 20;
 
   // --- Pages: Top row ---
   const pageY = 80;
@@ -517,7 +517,7 @@ const ArchitectureMap: React.FC<ArchitectureMapProps> = ({ files }) => {
       const architectureNodes = await buildArchitectureTree(files);
       
       // Update importantFiles filtering to use file.importance directly
-      const importantFiles = files.filter(file => (file.importance ?? 0) >= 5);
+      const importantFiles = (files as FileData[]).filter(file => (file.importance ?? 0) >= 5);
       
       const fileConnections = await extractConnections(importantFiles);
       
