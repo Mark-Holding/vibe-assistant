@@ -1,6 +1,30 @@
 import { useState, useCallback } from 'react';
 import { FileData, FileStats, FileTreeNode } from '../types/code-analyzer';
 import { processUploadedFiles, buildFileTree, calculateStats, readFileContent } from '../utils/fileUtils';
+import { categorizeByAST } from '../components/code-analyzer/architecture-map';
+
+// Filtering logic copied from page.tsx
+const isRelevantSourceFile = (file: FileData) => {
+  if (!file || !file.path) return false;
+  const excludeDirs = [
+    '/node_modules/', '/.git/', '/dist/', '/build/', '/out/', '/.next/', '/.vercel/'
+  ];
+  const ext = file.path.split('.').pop()?.toLowerCase();
+  const allowedExts = [
+    'js', 'jsx', 'ts', 'tsx', 'json', 'css', 'scss', 'md'
+  ];
+  if (
+    file.path.startsWith('.') ||
+    file.name.startsWith('.') ||
+    excludeDirs.some(dir => file.path.includes(dir))
+  ) {
+    return false;
+  }
+  if (!ext || !allowedExts.includes(ext)) {
+    return false;
+  }
+  return true;
+};
 
 export const useFileAnalysis = () => {
   const [files, setFiles] = useState<FileData[]>([]);
@@ -9,26 +33,28 @@ export const useFileAnalysis = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleFileUpload = useCallback((uploadedFiles: FileData[]) => {
+  const handleFileUpload = useCallback(async (uploadedFiles: FileData[]) => {
     try {
-      console.log('Processing uploaded files:', uploadedFiles.length);
-      // Filter out any null files that might have been returned
-      const validFiles = uploadedFiles.filter(file => file && file.path);
-      console.log('Valid files after filtering:', validFiles.length);
+      // Only keep files that pass the relevant source file filter
+      const validFiles = uploadedFiles.filter(file => file && file.path && isRelevantSourceFile(file));
       if (validFiles.length === 0) {
-        console.warn('No valid files to process');
         setError('No valid files to process');
         return;
       }
-      console.log('First few valid files:', validFiles.slice(0, 3).map(f => ({
-        name: f.name,
-        path: f.path,
-        type: f.type
-      })));
-      setFiles(validFiles);
+      const categorizedFiles: FileData[] = [];
+      for (const file of validFiles) {
+        let content = '';
+        try {
+          if (typeof file.file.text === 'function') {
+            content = await file.file.text();
+          }
+        } catch {}
+        const { category, importance } = categorizeByAST(content, file.path);
+        categorizedFiles.push({ ...file, category, importance });
+      }
+      setFiles(categorizedFiles);
       setError(null);
     } catch (err) {
-      console.error('Error processing files:', err);
       setError('Error processing files');
     }
   }, []);

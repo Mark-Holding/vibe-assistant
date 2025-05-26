@@ -101,7 +101,7 @@ const categorizeFile = (path: string): { category: string; importance: number } 
 };
 
 // File categorization rules
-const categorizeByAST = (content: string, path: string): { category: string; importance: number } => {
+export const categorizeByAST = (content: string, path: string): { category: string; importance: number } => {
   // Path-based quick checks for dependencies
   const pathParts = path.split('/');
   if (pathParts.includes('node_modules') || pathParts.includes('.git')) {
@@ -164,14 +164,17 @@ const categorizeByAST = (content: string, path: string): { category: string; imp
         }
       },
     });
-    if (foundJSX) return { category: 'component', importance: 8 };
-    if (foundUseFunction) return { category: 'utility', importance: 7 };
-    if (foundService) return { category: 'service', importance: 8 };
-    if (foundType) return { category: 'types', importance: 5 };
-    if (foundTest) return { category: 'tests', importance: 3 };
-    if (foundStyle) return { category: 'styles', importance: 4 };
-  } catch {}
+    if (foundJSX) { console.log('AST categorized as component:', path); return { category: 'component', importance: 8 }; }
+    if (foundUseFunction) { console.log('AST categorized as utility:', path); return { category: 'utility', importance: 7 }; }
+    if (foundService) { console.log('AST categorized as service:', path); return { category: 'service', importance: 8 }; }
+    if (foundType) { console.log('AST categorized as types:', path); return { category: 'types', importance: 5 }; }
+    if (foundTest) { console.log('AST categorized as tests:', path); return { category: 'tests', importance: 3 }; }
+    if (foundStyle) { console.log('AST categorized as styles:', path); return { category: 'styles', importance: 4 }; }
+  } catch (e) {
+    console.warn('AST parse failed, falling back:', path, e);
+  }
   // Fallback to path-based
+  console.log('Fallback to path-based categorization:', path);
   return categorizeFile(path);
 };
 
@@ -280,18 +283,11 @@ const resolvePath = (currentPath: string, importPath: string): string => {
 };
 
 // Build simplified architecture tree
-const buildArchitectureTree = async (files: Array<{ name: string; path: string; type: string; size: number; file: File }>): Promise<ArchitectureNode[]> => {
+const buildArchitectureTree = async (files: Array<{ name: string; path: string; type: string; size: number; file: File; category?: string; importance?: number }>): Promise<ArchitectureNode[]> => {
   const categorizedFiles = new Map<string, Array<{ name: string; path: string; importance: number }>>();
-  
-  // Categorize all files
   for (const file of files) {
-    let content = '';
-    try {
-      if (typeof file.file.text === 'function') {
-        content = await file.file.text();
-      }
-    } catch {}
-    const { category, importance } = categorizeByAST(content, file.path);
+    const category = file.category || 'other';
+    const importance = file.importance ?? 3;
     if (!categorizedFiles.has(category)) {
       categorizedFiles.set(category, []);
     }
@@ -411,39 +407,69 @@ const buildArchitectureTree = async (files: Array<{ name: string; path: string; 
 
 // Layout algorithm for positioning nodes
 const layoutNodes = (nodes: ArchitectureNode[], width: number, height: number): ArchitectureNode[] => {
-  const centerX = width / 2;
-  const centerY = height / 2;
-  const padding = 60; // px, space from edge
-  // Find the largest node width/height
-  const maxNodeWidth = Math.max(...nodes.map(n => n.width));
-  const maxNodeHeight = Math.max(...nodes.map(n => n.height));
-  // Calculate the maximum radius so nodes fit within the view
-  const maxRadius = Math.min(
-    (width - maxNodeWidth) / 2 - padding,
-    (height - maxNodeHeight) / 2 - padding
-  );
-  // Group nodes by level
-  const levels = new Map<number, ArchitectureNode[]>();
-  nodes.forEach(node => {
-    if (!levels.has(node.level)) {
-      levels.set(node.level, []);
+  // Group nodes by type
+  const pages = nodes.filter(n => n.type === 'page');
+  const services = nodes.filter(n => n.type === 'service');
+  const components = nodes.filter(n => n.type === 'component');
+  const utilities = nodes.filter(n => n.type === 'utility');
+  const groups = nodes.filter(n => n.type === 'group');
+  const padding = 20;
+
+  // --- Pages: Top row ---
+  const pageY = 80;
+  const pageSpacing = pages.length > 1 ? Math.max(140, (width - 100) / pages.length) : 0;
+  pages.forEach((node, i) => {
+    node.x = width / 2 - ((pages.length - 1) * pageSpacing) / 2 + i * pageSpacing;
+    node.y = pageY;
+  });
+
+  // --- Services: Second row ---
+  const serviceY = 200;
+  const serviceSpacing = services.length > 1 ? Math.max(140, (width - 100) / services.length) : 0;
+  services.forEach((node, i) => {
+    node.x = width / 2 - ((services.length - 1) * serviceSpacing) / 2 + i * serviceSpacing;
+    node.y = serviceY;
+  });
+
+  // --- Components: Center grid ---
+  const compStartY = 320;
+  const componentsPerRow = Math.min(6, components.length);
+  const compRows = Math.ceil(components.length / componentsPerRow);
+  const compSpacingX = componentsPerRow > 1 ? Math.min(180, (width - 100) / componentsPerRow) : 0;
+  const compSpacingY = 80;
+  components.forEach((node, i) => {
+    const row = Math.floor(i / componentsPerRow);
+    const col = i % componentsPerRow;
+    const rowY = compStartY + row * compSpacingY;
+    const rowCount = (row === compRows - 1) ? (components.length - row * componentsPerRow) : componentsPerRow;
+    const rowWidth = (rowCount - 1) * compSpacingX;
+    node.x = width / 2 - rowWidth / 2 + col * compSpacingX;
+    node.y = rowY;
+  });
+
+  // --- Utilities: Left and right columns ---
+  const utilLeftX = 80;
+  const utilRightX = width - 180;
+  const utilSpacingY = 60;
+  const utilHalf = Math.ceil(utilities.length / 2);
+  utilities.forEach((node, i) => {
+    if (i < utilHalf) {
+      node.x = utilLeftX;
+      node.y = compStartY + i * utilSpacingY;
+    } else {
+      node.x = utilRightX;
+      node.y = compStartY + (i - utilHalf) * utilSpacingY;
     }
-    levels.get(node.level)!.push(node);
   });
-  // Position nodes in concentric circles, scaling radius to fit
-  const maxLevel = Math.max(...Array.from(levels.keys()));
-  levels.forEach((levelNodes, level) => {
-    // Distribute available radius among levels
-    const radius = maxLevel > 1
-      ? (maxRadius * (level - 1) / (maxLevel - 1)) + padding
-      : padding;
-    const angleStep = (2 * Math.PI) / levelNodes.length;
-    levelNodes.forEach((node, index) => {
-      const angle = index * angleStep;
-      node.x = centerX + Math.cos(angle) * radius;
-      node.y = centerY + Math.sin(angle) * radius;
-    });
+
+  // --- Groups: Bottom row ---
+  const groupY = height - 120;
+  const groupSpacing = groups.length > 1 ? Math.max(140, (width - 100) / groups.length) : 0;
+  groups.forEach((node, i) => {
+    node.x = width / 2 - ((groups.length - 1) * groupSpacing) / 2 + i * groupSpacing;
+    node.y = groupY;
   });
+
   return nodes;
 };
 
@@ -490,11 +516,8 @@ const ArchitectureMap: React.FC<ArchitectureMapProps> = ({ files }) => {
       // Build simplified architecture tree
       const architectureNodes = await buildArchitectureTree(files);
       
-      // Lower importance threshold to 5
-      const importantFiles = files.filter(file => {
-        const { importance } = categorizeByAST('', file.path);
-        return importance >= 5;
-      });
+      // Update importantFiles filtering to use file.importance directly
+      const importantFiles = files.filter(file => (file.importance ?? 0) >= 5);
       
       const fileConnections = await extractConnections(importantFiles);
       
@@ -765,13 +788,35 @@ const ArchitectureMap: React.FC<ArchitectureMapProps> = ({ files }) => {
             <g>
               {nodes.map((node) => {
                 const colors = getNodeColor(node.type);
+                const isGroup = node.type === 'group';
+                let displayName = node.name;
+                if (!isGroup && node.files && node.files.length === 1) {
+                  const filePath = node.files[0];
+                  const fileName = filePath.split('/').pop() || node.name;
+                  if (node.type === 'page') {
+                    // Use folder name + file name for pages
+                    const parts = filePath.split('/');
+                    const folderName = parts.length > 1 ? parts[parts.length - 2] : '';
+                    displayName = folderName ? `${folderName} ${fileName}` : fileName;
+                  } else {
+                    displayName = fileName;
+                  }
+                }
+                // Dynamically calculate width and height based on text
+                const charWidth = 7;
+                const minWidth = isGroup ? 100 : 60;
+                const textWidth = displayName.length * charWidth;
+                const boxWidth = Math.max(minWidth, 32 + textWidth + 16); // 32 for icon/padding, 16 for extra space
+                const fontSize = 12;
+                const verticalPadding = 14;
+                const boxHeight = isGroup ? node.height : fontSize + verticalPadding * 2;
                 return (
                   <g key={node.id}>
                     <rect
                       x={node.x + panOffset.x}
                       y={node.y + panOffset.y}
-                      width={node.width}
-                      height={node.height}
+                      width={boxWidth}
+                      height={boxHeight}
                       fill={colors.bg}
                       stroke={colors.border}
                       strokeWidth="2"
@@ -798,13 +843,13 @@ const ArchitectureMap: React.FC<ArchitectureMapProps> = ({ files }) => {
                     {/* Node text */}
                     <text
                       x={node.x + 28 + panOffset.x}
-                      y={node.y + 18 + panOffset.y}
-                      fontSize="12"
+                      y={node.y + verticalPadding + fontSize + panOffset.y - 4}
+                      fontSize={fontSize}
                       fontWeight="500"
                       fill={colors.text}
                       className="pointer-events-none"
                     >
-                      {node.name.length > 12 ? `${node.name.substring(0, 12)}...` : node.name}
+                      {displayName.length > 48 ? `${displayName.substring(0, 45)}...` : displayName}
                     </text>
                     
                     {/* File count for groups */}

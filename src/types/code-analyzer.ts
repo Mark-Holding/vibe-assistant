@@ -5,6 +5,8 @@ export interface FileData {
   type: string;
   lastModified: Date;
   file: File;
+  category?: string;
+  importance?: number;
 }
 
 export interface FileStats {
