@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeMaster - Understand Any Codebase in Minutes</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f8fafc;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #e2e8f0;
+            z-index: 1000;
+            padding: 15px 0;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #1a202c;
+        }
+
+        .logo::before {
+            content: "⚡";
+            margin-right: 10px;
+            font-size: 28px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: none;
+            font-size: 16px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #4a5568;
+            border: 2px solid #e2e8f0;
+        }
+
+        .btn-secondary:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 120px 0 80px;
+            text-align: center;
+            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+        }
+
+        .trust-badge {
+            display: inline-flex;
+            align-items: center;
+            background: #f0fff4;
+            color: #22543d;
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-size: 14px;
+            margin-bottom: 30px;
+            border: 1px solid #c6f6d5;
+        }
+
+        .trust-badge::before {
+            content: "🛡️";
+            margin-right: 8px;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 24px;
+            color: #1a202c;
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: #4a5568;
+            margin-bottom: 40px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .cta-buttons {
+            margin-bottom: 60px;
+        }
+
+        .cta-buttons .btn {
+            margin: 0 10px;
+            padding: 16px 32px;
+            font-size: 18px;
+        }
+
+        .social-proof {
+            text-align: center;
+        }
+
+        .social-proof p {
+            color: #718096;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .logo-grid {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 40px;
+            flex-wrap: wrap;
+            opacity: 0.6;
+        }
+
+        .logo-grid span {
+            font-size: 20px;
+            font-weight: 700;
+            color: #a0aec0;
+        }
+
+        /* Problem Solution Section */
+        .problem-solution {
+            padding: 80px 0;
+            background: white;
+        }
+
+        .grid {
+            display: grid;
+            gap: 60px;
+            align-items: center;
+        }
+
+        .grid-2 {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .problem-solution h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 30px;
+            line-height: 1.2;
+        }
+
+        .problem-text {
+            color: #e53e3e;
+        }
+
+        .solution-text {
+            color: #38a169;
+        }
+
+        .feature-list {
+            list-style: none;
+        }
+
+        .feature-list li {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            font-size: 18px;
+            color: #4a5568;
+        }
+
+        .feature-list li::before {
+            margin-right: 12px;
+            margin-top: 2px;
+            font-size: 18px;
+        }
+
+        .problem-list li::before {
+            content: "❌";
+        }
+
+        .solution-list li::before {
+            content: "✅";
+        }
+
+        /* Demo Section */
+        .demo {
+            padding: 80px 0;
+            background: #f7fafc;
+        }
+
+        .demo h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .demo p {
+            text-align: center;
+            font-size: 1.25rem;
+            color: #4a5568;
+            margin-bottom: 50px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .demo-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            overflow: hidden;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .demo-header {
+            background: #2d3748;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+        }
+
+        .demo-dots {
+            display: flex;
+            gap: 8px;
+        }
+
+        .demo-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .demo-dot:nth-child(1) { background: #fc8181; }
+        .demo-dot:nth-child(2) { background: #f6e05e; }
+        .demo-dot:nth-child(3) { background: #68d391; }
+
+        .demo-title {
+            color: white;
+            text-align: center;
+            flex: 1;
+            font-size: 14px;
+        }
+
+        .demo-content {
+            padding: 80px 40px;
+            background: linear-gradient(135deg, #ebf8ff 0%, #fdf2f8 100%);
+            text-align: center;
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .play-button {
+            font-size: 80px;
+            color: #667eea;
+            margin-bottom: 30px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .play-button::before {
+            content: "▶️";
+        }
+
+        .play-button:hover {
+            transform: scale(1.1);
+        }
+
+        .demo-content h3 {
+            font-size: 2rem;
+            margin-bottom: 16px;
+            color: #1a202c;
+        }
+
+        /* Features Section */
+        .features {
+            padding: 80px 0;
+            background: white;
+        }
+
+        .features h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .features > p {
+            text-align: center;
+            font-size: 1.25rem;
+            color: #4a5568;
+            margin-bottom: 60px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 40px 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+            border: 1px solid #e2e8f0;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 25px rgba(0, 0, 0, 0.1);
+            border-color: #667eea;
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .feature-card h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #1a202c;
+        }
+
+        .feature-card p {
+            color: #4a5568;
+            margin-bottom: 16px;
+            line-height: 1.6;
+        }
+
+        .feature-benefit {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        /* Testimonials */
+        .testimonials {
+            padding: 80px 0;
+            background: #f7fafc;
+        }
+
+        .testimonials h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .testimonials-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+        }
+
+        .testimonial {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+        }
+
+        .testimonial-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .testimonial-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .testimonial-info h4 {
+            font-weight: 600;
+            color: #1a202c;
+        }
+
+        .testimonial-info p {
+            color: #718096;
+            font-size: 14px;
+        }
+
+        .stars {
+            color: #f6e05e;
+            margin-bottom: 15px;
+        }
+
+        .testimonial-text {
+            color: #4a5568;
+            font-style: italic;
+            line-height: 1.6;
+        }
+
+        /* Pricing */
+        .pricing {
+            padding: 80px 0;
+            background: white;
+        }
+
+        .pricing h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .pricing > p {
+            text-align: center;
+            font-size: 1.25rem;
+            color: #4a5568;
+            margin-bottom: 60px;
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .pricing-card {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-8px);
+        }
+
+        .pricing-card.popular {
+            border-color: #667eea;
+            transform: scale(1.05);
+        }
+
+        .popular-badge {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(45deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 8px 24px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .pricing-card h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .price {
+            font-size: 3rem;
+            font-weight: 700;
+            color: #1a202c;
+            margin-bottom: 10px;
+        }
+
+        .price-period {
+            color: #718096;
+            margin-bottom: 30px;
+        }
+
+        .pricing-features {
+            list-style: none;
+            margin-bottom: 40px;
+            text-align: left;
+        }
+
+        .pricing-features li {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            color: #4a5568;
+        }
+
+        .pricing-features li::before {
+            content: "✅";
+            margin-right: 12px;
+        }
+
+        /* FAQ */
+        .faq {
+            padding: 80px 0;
+            background: #f7fafc;
+        }
+
+        .faq h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .faq-item {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .faq-item h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1a202c;
+            margin-bottom: 15px;
+        }
+
+        .faq-item p {
+            color: #4a5568;
+            line-height: 1.6;
+        }
+
+        /* Final CTA */
+        .final-cta {
+            padding: 80px 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+        }
+
+        .final-cta h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        .final-cta p {
+            font-size: 1.25rem;
+            margin-bottom: 40px;
+            opacity: 0.9;
+        }
+
+        .final-cta .btn {
+            margin: 0 10px;
+            padding: 16px 32px;
+            font-size: 18px;
+        }
+
+        .btn-white {
+            background: white;
+            color: #667eea;
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+        }
+
+        .btn-outline:hover {
+            background: white;
+            color: #667eea;
+        }
+
+        /* Footer */
+        .footer {
+            padding: 60px 0 30px;
+            background: #1a202c;
+            color: white;
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 40px;
+            margin-bottom: 40px;
+        }
+
+        .footer-section h5 {
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .footer-section ul {
+            list-style: none;
+        }
+
+        .footer-section li {
+            margin-bottom: 10px;
+        }
+
+        .footer-section a {
+            color: #a0aec0;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer-section a:hover {
+            color: white;
+        }
+
+        .footer-bottom {
+            border-top: 1px solid #2d3748;
+            padding-top: 30px;
+            text-align: center;
+            color: #a0aec0;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+            
+            .cta-buttons .btn {
+                display: block;
+                margin: 10px 0;
+            }
+            
+            .logo-grid {
+                gap: 20px;
+            }
+            
+            .features-grid,
+            .testimonials-grid,
+            .pricing-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Scroll CTA */
+        .scroll-cta {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            transform: translateY(100px);
+            transition: transform 0.3s ease;
+        }
+
+        .scroll-cta.visible {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">CodeMaster</div>
+                <button class="btn btn-primary">Start Free Trial</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="trust-badge">Trusted by 2,000+ developers worldwide</div>
+            
+            <h1>
+                Stop Drowning in 
+                <span class="gradient-text">AI-Generated Code</span>
+            </h1>
+            
+            <p>Instantly understand any codebase with AI-powered analysis, visual maps, and plain-English explanations.</p>
+            
+            <div class="cta-buttons">
+                <button class="btn btn-primary">🚀 Analyze Your Code Free</button>
+                <button class="btn btn-secondary">▶️ Watch Demo</button>
+            </div>
+            
+            <div class="social-proof">
+                <p>Used by developers at</p>
+                <div class="logo-grid">
+                    <span>GitHub</span>
+                    <span>Vercel</span>
+                    <span>Stripe</span>
+                    <span>Shopify</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Problem + Solution -->
+    <section class="problem-solution">
+        <div class="container">
+            <div class="grid grid-2">
+                <div>
+                    <h2><span class="problem-text">The Problem:</span><br>AI Code Feels Like a Black Box</h2>
+                    <ul class="feature-list problem-list">
+                        <li>You inherit massive codebases you didn't write</li>
+                        <li>Spend hours just figuring out what files do</li>
+                        <li>Fear making changes because you don't understand dependencies</li>
+                        <li>Junior developers feel overwhelmed and lost</li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h2><span class="solution-text">The Solution:</span><br>Instant Code Understanding</h2>
+                    <ul class="feature-list solution-list">
+                        <li>Upload any project and get instant visual maps</li>
+                        <li>Plain-English explanations of every function</li>
+                        <li>See exactly how components connect</li>
+                        <li>Regain confidence to modify and extend code</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Demo Section -->
+    <section class="demo">
+        <div class="container">
+            <h2>See CodeMaster in Action</h2>
+            <p>Watch how CodeMaster transforms a confusing codebase into clear, understandable insights in under 60 seconds.</p>
+            
+            <div class="demo-container">
+                <div class="demo-header">
+                    <div class="demo-dots">
+                        <div class="demo-dot"></div>
+                        <div class="demo-dot"></div>
+                        <div class="demo-dot"></div>
+                    </div>
+                    <div class="demo-title">CodeMaster Dashboard</div>
+                </div>
+                <div class="demo-content">
+                    <div class="play-button"></div>
+                    <h3>Interactive Demo</h3>
+                    <p>See the architecture map, code analysis, and design system in action</p>
+                    <button class="btn btn-primary">Play Demo Video</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features">
+        <div class="container">
+            <h2>Everything You Need to Master Any Codebase</h2>
+            <p>From visual architecture maps to AI-powered explanations, we've got every aspect of code understanding covered.</p>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <span class="feature-icon">🗺️</span>
+                    <h3>Visual Architecture Maps</h3>
+                    <p>See your entire codebase as an interactive diagram. Understand how components connect at a glance.</p>
+                    <div class="feature-benefit" style="color: #3182ce;">→ No more guessing</div>
+                </div>
+                
+                <div class="feature-card">
+                    <span class="feature-icon">🤖</span>
+                    <h3>AI Code Explanations</h3>
+                    <p>Every function gets a plain-English explanation. Know what code does without reading every line.</p>
+                    <div class="feature-benefit" style="color: #38a169;">→ Save hours daily</div>
+                </div>
+                
+                <div class="feature-card">
+                    <span class="feature-icon">🔍</span>
+                    <h3>Smart Code Search</h3>
+                    <p>Find any function, component, or logic instantly. Search by purpose, not just file names.</p>
+                    <div class="feature-benefit" style="color: #805ad5;">→ Find anything fast</div>
+                </div>
+                
+                <div class="feature-card">
+                    <span class="feature-icon">🔗</span>
+                    <h3>Dependency Tracking</h3>
+                    <p>See exactly what depends on what. Make changes confidently without breaking things.</p>
+                    <div class="feature-benefit" style="color: #dd6b20;">→ Safe refactoring</div>
+                </div>
+                
+                <div class="feature-card">
+                    <span class="feature-icon">🎨</span>
+                    <h3>Design System Analysis</h3>
+                    <p>Extract colors, fonts, and spacing from CSS. Understand the design patterns used.</p>
+                    <div class="feature-benefit" style="color: #e53e3e;">→ Consistent styling</div>
+                </div>
+                
+                <div class="feature-card">
+                    <span class="feature-icon">🛡️</span>
+                    <h3>100% Private & Secure</h3>
+                    <p>Your code never leaves your machine. All analysis happens locally in your browser.</p>
+                    <div class="feature-benefit" style="color: #553c9a;">→ Enterprise ready</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials -->
+    <section class="testimonials">
+        <div class="container">
+            <h2>Loved by Developers Worldwide</h2>
+            
+            <div class="testimonials-grid">
+                <div class="testimonial">
+                    <div class="testimonial-header">
+                        <div class="testimonial-avatar">AC</div>
+                        <div class="testimonial-info">
+                            <h4>Alex Chen</h4>
+                            <p>Senior Developer @ Stripe</p>
+                        </div>
+                    </div>
+                    <div class="stars">⭐⭐⭐⭐⭐</div>
+                    <p class="testimonial-text">"CodeMaster saved me 20+ hours on my last project. I could understand a React codebase in minutes instead of days. Game changer!"</p>
+                </div>
+                
+                <div class="testimonial">
+                    <div class="testimonial-header">
+                        <div class="testimonial-avatar">SJ</div>
+                        <div class="testimonial-info">
+                            <h4>Sarah Johnson</h4>
+                            <p>Tech Lead @ Shopify</p>
+                        </div>
+                    </div>
+                    <div class="stars">⭐⭐⭐⭐⭐</div>
+                    <p class="testimonial-text">"Perfect for onboarding new team members. They can understand our architecture in an hour instead of weeks."</p>
+                </div>
+                
+                <div class="testimonial">
+                    <div class="testimonial-header">
+                        <div class="testimonial-avatar">MR</div>
+                        <div class="testimonial-info">
+                            <h4>Mike Rodriguez</h4>
+                            <p>Freelance Developer</p>
+                        </div>
+                    </div>
+                    <div class="stars">⭐⭐⭐⭐⭐</div>
+                    <p class="testimonial-text">"As a freelancer taking over client projects, this tool is invaluable. I can quote accurately and deliver faster."</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing -->
+    <section class="pricing">
+        <div class="container">
+            <h2>Simple, Transparent Pricing</h2>
+            <p>Start free, upgrade when you need more. No hidden fees, cancel anytime.</p>
+            
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <h3>Free</h3>
+                    <div class="price">$0</div>
+                    <div class="price-period">Perfect for getting started</div>
+                    <ul class="pricing-features">
+                        <li>5 projects per month</li>
+                        <li>Basic architecture maps</li>
+                        <li>Code explanations</li>
+                        <li>Community support</li>
+                    </ul>
+                    <button class="btn btn-secondary" style="width: 100%;">Start Free</button>
+                </div>
+                
+                <div class="pricing-card popular">
+                    <div class="popular-badge">Most Popular</div>
+                    <h3>Pro</h3>
+                    <div class="price">$29</div>
+                    <div class="price-period">per month</div>
+                    <ul class="pricing-features">
+                        <li>Unlimited projects</li>
+                        <li>Advanced visual maps</li>
+                        <li>AI-powered insights</li>
+                        <li>Dependency tracking</li>
+                        <li>Design system analysis</li>
+                        <li>Priority support</li>
+                    </ul>
+                    <button class="btn btn-primary" style="width: 100%;">Start Pro Trial</button>
+                </div>
+                
+                <div class="pricing-card">
+                    <h3>Enterprise</h3>
+                    <div class="price">$99</div>
+                    <div class="price-period">per month</div>
+                    <ul class="pricing-features">
+                        <li>Everything in Pro</li>
+                        <li>Team collaboration</li>
+                        <li>Custom integrations</li>
+                        <li>Advanced security</li>
+                        <li>Dedicated support</li>
+                        <li>SLA guarantee</li>
+                    </ul>
+                    <button class="btn btn-secondary" style="width: 100%;">Contact Sales</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="faq">
+        <div class="container">
+            <h2>Frequently Asked Questions</h2>
+            
+            <div class="faq-item">
+                <h3>Is my code safe and secure?</h3>
+                <p>Absolutely. Your code is processed entirely in your browser - it never gets sent to our servers. All analysis happens locally on your machine, ensuring complete privacy and security.</p>
+            </div>
+            
+            <div class="faq-item">
+                <h3>What happens after my trial ends?</h3>
+                <p>You can continue using the free plan with limited projects, upgrade to Pro for unlimited access, or cancel anytime. No hidden fees or automatic charges without your permission.</p>
+            </div>
+            
+            <div class="faq-item">
+                <h3>How large of a codebase can I analyze?</h3>
+                <p>CodeMaster can handle projects of any size, from small scripts to enterprise applications with 100,000+ files. Performance scales based on your device's capabilities.</p>
+            </div>
+            
+            <div class="faq-item">
+                <h3>Do you offer refunds?</h3>
+                <p>Yes! We offer a 30-day money-back guarantee. If you're not completely satisfied with CodeMaster, we'll refund your purchase, no questions asked.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Final CTA -->
+    <section class="final-cta">
+        <div class="container">
+            <h2>Ready to Master Any Codebase?</h2>
+            <p>Join 2,000+ developers who've already transformed how they understand code. Start your free trial today.</p>
+            
+            <div class="cta-buttons">
+                <button class="btn btn-white">🚀 Start Free Trial Now</button>
+                <button class="btn btn-outline">📅 Book Demo</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h5>Company</h5>
+                    <ul>
+                        <li><a href="#">About Us</a></li>
+                        <li><a href="#">Careers</a></li>
+                        <li><a href="#">Press</a></li>
+                        <li><a href="#">Contact</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h5>Product</h5>
+                    <ul>
+                        <li><a href="#">Features</a></li>
+                        <li><a href="#">Pricing</a></li>
+                        <li><a href="#">Enterprise</a></li>
+                        <li><a href="#">API</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h5>Resources</h5>
+                    <ul>
+                        <li><a href="#">Documentation</a></li>
+                        <li><a href="#">Blog</a></li>
+                        <li><a href="#">Tutorials</a></li>
+                        <li><a href="#">Community</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h5>Legal</h5>
+                    <ul>
+                        <li><a href="#">Privacy Policy</a></li>
+                        <li><a href="#">Terms of Service</a></li>
+                        <li><a href="#">Cookie Policy</a></li>
+                        <li><a href="#">Security</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; 2024 CodeMaster. All rights reserved. Made with ❤️ for developers worldwide.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scroll CTA -->
+    <div class="scroll-cta" id="scrollCta">
+        <button class="btn btn-primary">🚀 Try Free Now</button>
+    </div>
+
+    <script>
+        // Show/hide scroll CTA
+        window.addEventListener('scroll', function() {
+            const scrollCta = document.getElementById('scrollCta');
+            if (window.scrollY > 800) {
+                scrollCta.classList.add('visible');
+            } else {
+                scrollCta.classList.remove('visible');
+            }
+        });
+
+        // Smooth scroll for demo button
+        document.querySelectorAll('.btn').forEach(button => {
+            button.addEventListener('click', function(e) {
+                if (this.textContent.includes('Demo')) {
+                    e.preventDefault();
+                    document.querySelector('.demo').scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                } else if (this.textContent.includes('Start') || this.textContent.includes('Trial')) {
+                    // Replace with actual signup functionality
+                    alert('🎉 Ready to start your free trial!\n\nThis would redirect to your signup page.');
+                }
+            });
+        });
+
+        // Add floating animation to play button
+        const playButton = document.querySelector('.play-button');
+        if (playButton) {
+            playButton.addEventListener('click', function() {
+                alert('🎬 Demo video would play here!\n\nShow your actual product demo video.');
+            });
+        }
+
+        // Add hover effects to feature cards
+        document.querySelectorAll('.feature-card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-8px)';
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
+
+        // Pricing card interactions
+        document.querySelectorAll('.pricing-card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                if (!this.classList.contains('popular')) {
+                    this.style.transform = 'translateY(-8px)';
+                }
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                if (!this.classList.contains('popular')) {
+                    this.style.transform = 'translateY(0)';
+                }
+            });
+        });
+
+        // Add click tracking for conversion optimization
+        document.querySelectorAll('.btn-primary, .btn-secondary').forEach(button => {
+            button.addEventListener('click', function() {
+                // Track button clicks for analytics
+                console.log('Button clicked:', this.textContent.trim());
+                
+                // You can add real analytics tracking here:
+                // gtag('event', 'click', { button_text: this.textContent.trim() });
+            });
+        });
+    </script>
+</body>
+</html><h3>Will this work with my programming language/framework?</h3>
+                <p>CodeMaster supports all major languages including JavaScript, TypeScript, Python, React, Next.js, Vue, Angular, and more. If you can upload it, we can analyze it.</p>
+            </div>
+            
+            <div class="faq-item">
+                
