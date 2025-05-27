@@ -11,6 +11,7 @@ import {
 import { Button } from "../../components/ui/Button";
 import { FileData } from "../../types/code-analyzer";
 import { FileStructureTab } from "../../components/code-analyzer/file-structure/FileStructureTab";
+import CodeAnalysisTab from "../../components/code-analyzer/code-analysis/CodeAnalysisTab";
 
 export default function CodeAnalyzerPage() {
   const [activeTab, setActiveTab] = useState<
@@ -146,7 +147,9 @@ export default function CodeAnalyzerPage() {
               />
             </div>
           ) : activeTab === "codeAnalysis" ? (
-            <div className="w-full"></div>
+            <div className="w-full">
+              <CodeAnalysisTab files={filteredFiles} />
+            </div>
           ) : activeTab === "designSystem" ? (
             <div className="w-full">
               <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
