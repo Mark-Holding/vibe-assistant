@@ -28,6 +28,7 @@ const isRelevantSourceFile = (file: FileData) => {
 
 export const useFileAnalysis = () => {
   const [files, setFiles] = useState<FileData[]>([]);
+  const [totalImportedFiles, setTotalImportedFiles] = useState<number>(0);
   const [selectedFile, setSelectedFile] = useState<FileData | null>(null);
   const [fileContent, setFileContent] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
@@ -35,6 +36,9 @@ export const useFileAnalysis = () => {
 
   const handleFileUpload = useCallback(async (uploadedFiles: FileData[]) => {
     try {
+      // Store total count before filtering
+      setTotalImportedFiles(uploadedFiles.length);
+      
       // Only keep files that pass the relevant source file filter
       const validFiles = uploadedFiles.filter(file => file && file.path && isRelevantSourceFile(file));
       if (validFiles.length === 0) {
@@ -86,6 +90,7 @@ export const useFileAnalysis = () => {
 
   return {
     files,
+    totalImportedFiles,
     selectedFile,
     fileContent,
     fileTree,

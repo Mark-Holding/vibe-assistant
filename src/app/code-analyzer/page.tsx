@@ -10,6 +10,7 @@ import {
 } from "../../components/code-analyzer";
 import { Button } from "../../components/ui/Button";
 import { FileData } from "../../types/code-analyzer";
+import { FileStructureTab } from "../../components/code-analyzer/file-structure/FileStructureTab";
 
 export default function CodeAnalyzerPage() {
   const [activeTab, setActiveTab] = useState<
@@ -18,6 +19,7 @@ export default function CodeAnalyzerPage() {
 
   const {
     files,
+    totalImportedFiles,
     handleFileUpload,
   } = useFileAnalysis();
 
@@ -137,7 +139,12 @@ export default function CodeAnalyzerPage() {
               <ArchitectureMap files={filteredFiles} />
             </div>
           ) : activeTab === "fileStructure" ? (
-            <div className="w-full"></div>
+            <div className="w-full">
+              <FileStructureTab 
+                files={filteredFiles} 
+                totalImportedFiles={totalImportedFiles}
+              />
+            </div>
           ) : activeTab === "codeAnalysis" ? (
             <div className="w-full"></div>
           ) : activeTab === "designSystem" ? (

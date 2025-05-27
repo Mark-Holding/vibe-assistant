@@ -12,6 +12,7 @@ import traverse from '@babel/traverse';
 import type { NodePath } from '@babel/traverse';
 import * as t from '@babel/types';
 import type { FileData } from '../../types/code-analyzer';
+import { FileTypeUtils } from './file-structure/utils';
 
 // Types
 interface ArchitectureNode {
@@ -475,16 +476,16 @@ const layoutNodes = (nodes: ArchitectureNode[], width: number, height: number): 
 
 // Get node color based on type
 const getNodeColor = (type: string): { bg: string; border: string; text: string } => {
-  const colors = {
-    service: { bg: '#dbeafe', border: '#3b82f6', text: '#1e40af' },
-    component: { bg: '#dcfce7', border: '#10b981', text: '#047857' },
-    page: { bg: '#fef3c7', border: '#f59e0b', text: '#92400e' },
-    utility: { bg: '#e9d5ff', border: '#8b5cf6', text: '#6b21a8' },
-    config: { bg: '#fee2e2', border: '#ef4444', text: '#b91c1c' },
-    group: { bg: '#f3f4f6', border: '#6b7280', text: '#374151' }
+  // Use FileTypeUtils.categorizeFile for color
+  const { color } = FileTypeUtils.categorizeFile(type);
+  // Use color for bg and border, and pick a readable text color
+  const textColor = ['#f7df1e', '#f59e42', '#fee2e2', '#fef3c7', '#fff', '#61dafb', '#10b981', '#22c55e', '#1572b6', '#6366f1'].includes(color)
+    ? '#222' : '#fff';
+  return {
+    bg: color,
+    border: color,
+    text: textColor
   };
-  
-  return colors[type as keyof typeof colors] || colors.group;
 };
 
 const ArchitectureMap: React.FC<ArchitectureMapProps> = ({ files }) => {
@@ -712,23 +713,23 @@ const ArchitectureMap: React.FC<ArchitectureMapProps> = ({ files }) => {
             <h5 className="font-medium text-gray-700 mb-2">Legend</h5>
             <div className="space-y-2 text-sm">
               <div className="flex items-center">
-                <Package size={14} className="mr-2 text-blue-600" />
+                <Package size={14} className="mr-2" style={{ color: FileTypeUtils.categorizeFile('Service').color }} />
                 <span>Services/APIs</span>
               </div>
               <div className="flex items-center">
-                <FileText size={14} className="mr-2 text-green-600" />
+                <FileText size={14} className="mr-2" style={{ color: FileTypeUtils.categorizeFile('Component').color }} />
                 <span>Components</span>
               </div>
               <div className="flex items-center">
-                <FileText size={14} className="mr-2" style={{ color: '#f59e0b' }} />
+                <FileText size={14} className="mr-2" style={{ color: FileTypeUtils.categorizeFile('Page').color }} />
                 <span>Pages</span>
               </div>
               <div className="flex items-center">
-                <Settings size={14} className="mr-2 text-purple-600" />
+                <Settings size={14} className="mr-2" style={{ color: FileTypeUtils.categorizeFile('Utility').color }} />
                 <span>Utilities</span>
               </div>
               <div className="flex items-center">
-                <Folder size={14} className="mr-2 text-gray-600" />
+                <Folder size={14} className="mr-2" style={{ color: FileTypeUtils.categorizeFile('Other').color }} />
                 <span>Grouped Files</span>
               </div>
             </div>

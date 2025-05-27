@@ -45,4 +45,21 @@ export interface SearchPanelProps {
   onFileSelect: (file: FileData) => void;
   searchTerm: string;
   onSearchChange: (term: string) => void;
+}
+
+export interface FileNode {
+  name: string;
+  type: 'file' | 'folder';
+  children?: FileNode[];
+  loc?: number;
+  fileType?: string;
+  functions?: number;
+  path: string;
+}
+
+export interface FileTypeData {
+  count: number;
+  loc: number;
+  color: string;
+  functions: number;
 } 
