@@ -49,7 +49,7 @@ const features = [
 
 const FeaturesSection: React.FC = () => {
   return (
-    <section className="py-20 bg-white">
+    <section id="features-section" className="py-20 bg-white">
       <div className="container mx-auto px-5">
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold mb-4">Everything You Need to Master Any Codebase</h2>

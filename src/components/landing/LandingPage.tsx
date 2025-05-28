@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { FileUploader } from '../code-analyzer';
 import { FileData } from '../../types/code-analyzer';
 import ProblemSolutionSection from './ProblemSolutionSection';
@@ -13,6 +14,7 @@ import FinalCTASection from './FinalCTASection';
 import Footer from './Footer';
 
 const LandingPage: React.FC = () => {
+  const router = useRouter();
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showStickyCTA, setShowStickyCTA] = useState(false);
 
@@ -26,9 +28,41 @@ const LandingPage: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const onFilesUploaded = (uploadedFiles: FileData[]) => {
-    // Handle file upload
+  const onFilesUploaded = async (uploadedFiles: FileData[]) => {
+    // Store files in localStorage for the code analyzer page
+    try {
+      // Convert FileData to a serializable format with actual file content
+      const serializableFiles = await Promise.all(
+        uploadedFiles.map(async (file) => {
+          let content = '';
+          try {
+            if (file.file && typeof file.file.text === 'function') {
+              content = await file.file.text();
+            }
+          } catch (error) {
+            console.warn(`Could not read content for file ${file.name}:`, error);
+          }
+          
+          return {
+            name: file.name,
+            path: file.path,
+            size: file.size,
+            type: file.type,
+            content: content, // Store the actual file content
+            category: file.category,
+            importance: file.importance
+          };
+        })
+      );
+      
+      localStorage.setItem('uploadedFiles', JSON.stringify(serializableFiles));
+    } catch (error) {
+      console.error('Error storing files in localStorage:', error);
+    }
+    
+    // Close modal and navigate to file structure page
     setShowUploadModal(false);
+    router.push('/code-analyzer');
   };
 
   const scrollToDemo = () => {
@@ -47,9 +81,15 @@ const LandingPage: React.FC = () => {
             <span className="mr-2.5 text-2xl">⚡</span>
             CodeMaster
           </div>
+          <nav className="hidden md:flex items-center gap-8 text-base font-medium">
+            <button onClick={scrollToDemo} className="text-gray-700 hover:text-[#667eea] transition-colors">Demo</button>
+            <button onClick={() => document.getElementById('features-section')?.scrollIntoView({ behavior: 'smooth' })} className="text-gray-700 hover:text-[#667eea] transition-colors">Features</button>
+            <button onClick={() => document.getElementById('pricing-section')?.scrollIntoView({ behavior: 'smooth' })} className="text-gray-700 hover:text-[#667eea] transition-colors">Pricing</button>
+            <button onClick={() => router.push('/sign-in')} className="ml-2 text-gray-700 hover:text-[#667eea] transition-colors">Sign In</button>
+          </nav>
           <button
             onClick={() => setShowUploadModal(true)}
-            className="px-6 py-3 rounded-lg font-semibold text-base transition-all duration-300 bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white hover:from-[#5a67d8] hover:to-[#6b46c1] hover:-translate-y-0.5 hover:shadow-lg"
+            className="px-6 py-3 rounded-lg font-semibold text-base transition-all duration-300 bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white hover:from-[#5a67d8] hover:to-[#6b46c1] hover:-translate-y-0.5 hover:shadow-lg ml-4"
           >
             Start Free Trial
           </button>

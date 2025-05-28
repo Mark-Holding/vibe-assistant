@@ -53,7 +53,7 @@ const pricingTiers = [
 
 const PricingSection: React.FC = () => {
   return (
-    <section className="py-20 bg-white">
+    <section id="pricing-section" className="py-20 bg-white">
       <div className="container mx-auto px-5">
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold mb-4">Simple, Transparent Pricing</h2>

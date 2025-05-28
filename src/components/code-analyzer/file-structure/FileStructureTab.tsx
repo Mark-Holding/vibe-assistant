@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Folder } from 'lucide-react';
 import { FileNode, FileTypeData } from '../../../types/code-analyzer';
 import { FileTree } from './FileTree';
 import { FileTypeBreakdown } from './FileTypeBreakdown';

@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
-import { BarChart3, Folder, Network } from "lucide-react";
+import React, { useState, useCallback, useEffect } from "react";
+import { BarChart3, Folder, Network, Link } from "lucide-react";
 import { useFileAnalysis } from "../../hooks/useFileAnalysis";
 import {
-  FileUploader,
   DependencyVisualizer,
   ArchitectureMap,
+  LinkCodebaseTab,
 } from "../../components/code-analyzer";
 import { Button } from "../../components/ui/Button";
 import { FileData } from "../../types/code-analyzer";
@@ -16,8 +16,8 @@ import DesignSystemTab from "../../components/code-analyzer/design-system/Design
 
 export default function CodeAnalyzerPage() {
   const [activeTab, setActiveTab] = useState<
-    "fileStructure" | "codeAnalysis" | "designSystem" | "dependencies" | "codebaseMap"
-  >("fileStructure");
+    "linkCodebase" | "fileStructure" | "codeAnalysis" | "designSystem" | "dependencies" | "codebaseMap"
+  >("linkCodebase");
 
   const {
     files,
@@ -25,13 +25,61 @@ export default function CodeAnalyzerPage() {
     handleFileUpload,
   } = useFileAnalysis();
 
+  // Check for files in localStorage on mount
+  useEffect(() => {
+    try {
+      const storedFiles = localStorage.getItem('uploadedFiles');
+      if (storedFiles) {
+        const parsedFiles = JSON.parse(storedFiles);
+        // Convert back to FileData format with proper File objects containing content
+        const fileDataArray: FileData[] = parsedFiles.map((fileInfo: {
+          name: string;
+          path: string;
+          size: number;
+          type: string;
+          content?: string;
+          category?: string;
+          importance?: number;
+        }) => {
+          // Create a proper File object with the stored content
+          const fileContent = fileInfo.content || '';
+          const file = new File([fileContent], fileInfo.name, { 
+            type: fileInfo.type,
+            lastModified: Date.now()
+          });
+          
+          return {
+            name: fileInfo.name,
+            path: fileInfo.path,
+            size: fileInfo.size,
+            type: fileInfo.type,
+            content: fileInfo.content,
+            category: fileInfo.category,
+            importance: fileInfo.importance,
+            file: file // File object with actual content
+          };
+        });
+        
+        handleFileUpload(fileDataArray);
+        // Switch to File Structure tab after loading files
+        setActiveTab("fileStructure");
+        // Clear localStorage after loading
+        localStorage.removeItem('uploadedFiles');
+      }
+    } catch (error) {
+      console.error('Error loading files from localStorage:', error);
+    }
+  }, [handleFileUpload]);
+
   // Directly handle FileData[]
   const onFilesUploaded = (uploadedFiles: FileData[]) => {
     handleFileUpload(uploadedFiles);
+    // Switch to File Structure tab after uploading files
+    setActiveTab("fileStructure");
   };
 
   const handleTabChange = useCallback(
-    (tab: "fileStructure" | "codeAnalysis" | "designSystem" | "dependencies" | "codebaseMap") => {
+    (tab: "linkCodebase" | "fileStructure" | "codeAnalysis" | "designSystem" | "dependencies" | "codebaseMap") => {
       setActiveTab(tab);
     },
     []
@@ -72,92 +120,102 @@ export default function CodeAnalyzerPage() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-gray-900">Code Analyzer</h1>
-            {files.length === 0 && (
-              <FileUploader onFilesUploaded={onFilesUploaded} />
-            )}
           </div>
         </div>
       </div>
 
       {/* Navigation */}
-      {files.length > 0 && (
-        <div className="bg-white border-b">
-          <div className="max-w-7xl mx-auto px-4">
-            <nav className="flex space-x-8">
-              <Button
-                variant={activeTab === "fileStructure" ? "primary" : "outline"}
-                onClick={() => handleTabChange("fileStructure")}
-                className="flex items-center"
-              >
-                <Folder size={20} className="mr-2" />
-                File Structure
-              </Button>
-              <Button
-                variant={activeTab === "codeAnalysis" ? "primary" : "outline"}
-                onClick={() => handleTabChange("codeAnalysis")}
-                className="flex items-center"
-              >
-                <BarChart3 size={20} className="mr-2" />
-                Code Analysis
-              </Button>
-              <Button
-                variant={activeTab === "designSystem" ? "primary" : "outline"}
-                onClick={() => handleTabChange("designSystem")}
-                className="flex items-center"
-              >
-                🎨
-                <span className="ml-2">Design System</span>
-              </Button>
-              <Button
-                variant={activeTab === "dependencies" ? "primary" : "outline"}
-                onClick={() => handleTabChange("dependencies")}
-                className="flex items-center"
-              >
-                <Network size={20} className="mr-2" />
-                Dependencies
-              </Button>
-              <Button
-                variant={activeTab === "codebaseMap" ? "primary" : "outline"}
-                onClick={() => handleTabChange("codebaseMap")}
-                className="flex items-center"
-              >
-                🗺️
-                <span className="ml-2">Codebase Map</span>
-              </Button>
-            </nav>
-          </div>
+      <div className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4">
+          <nav className="flex space-x-8">
+            <Button
+              variant={activeTab === "linkCodebase" ? "primary" : "outline"}
+              onClick={() => handleTabChange("linkCodebase")}
+              className="flex items-center"
+            >
+              <Link size={20} className="mr-2" />
+              Link Codebase
+            </Button>
+            <Button
+              variant={activeTab === "fileStructure" ? "primary" : "outline"}
+              onClick={() => handleTabChange("fileStructure")}
+              className="flex items-center"
+              disabled={files.length === 0}
+            >
+              <Folder size={20} className="mr-2" />
+              File Structure
+            </Button>
+            <Button
+              variant={activeTab === "codeAnalysis" ? "primary" : "outline"}
+              onClick={() => handleTabChange("codeAnalysis")}
+              className="flex items-center"
+              disabled={files.length === 0}
+            >
+              <BarChart3 size={20} className="mr-2" />
+              Code Analysis
+            </Button>
+            <Button
+              variant={activeTab === "designSystem" ? "primary" : "outline"}
+              onClick={() => handleTabChange("designSystem")}
+              className="flex items-center"
+              disabled={files.length === 0}
+            >
+              🎨
+              <span className="ml-2">Design System</span>
+            </Button>
+            <Button
+              variant={activeTab === "dependencies" ? "primary" : "outline"}
+              onClick={() => handleTabChange("dependencies")}
+              className="flex items-center"
+              disabled={files.length === 0}
+            >
+              <Network size={20} className="mr-2" />
+              Dependencies
+            </Button>
+            <Button
+              variant={activeTab === "codebaseMap" ? "primary" : "outline"}
+              onClick={() => handleTabChange("codebaseMap")}
+              className="flex items-center"
+              disabled={files.length === 0}
+            >
+              🗺️
+              <span className="ml-2">Codebase Map</span>
+            </Button>
+          </nav>
         </div>
-      )}
+      </div>
 
-      {files.length > 0 && (
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          {/* Tab content */}
-          {activeTab === "dependencies" ? (
-            <div className="w-full">
-              <DependencyVisualizer files={filteredFiles} />
-            </div>
-          ) : activeTab === "codebaseMap" ? (
-            <div className="w-full">
-              <ArchitectureMap files={filteredFiles} />
-            </div>
-          ) : activeTab === "fileStructure" ? (
-            <div className="w-full">
-              <FileStructureTab 
-                files={filteredFiles} 
-                totalImportedFiles={totalImportedFiles}
-              />
-            </div>
-          ) : activeTab === "codeAnalysis" ? (
-            <div className="w-full">
-              <CodeAnalysisTab files={filteredFiles} />
-            </div>
-          ) : activeTab === "designSystem" ? (
-            <div className="w-full">
-              <DesignSystemTab files={filteredFiles} />
-            </div>
-          ) : null}
-        </div>
-      )}
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Tab content */}
+        {activeTab === "linkCodebase" ? (
+          <div className="w-full">
+            <LinkCodebaseTab onFilesUploaded={onFilesUploaded} />
+          </div>
+        ) : activeTab === "dependencies" ? (
+          <div className="w-full">
+            <DependencyVisualizer files={filteredFiles} />
+          </div>
+        ) : activeTab === "codebaseMap" ? (
+          <div className="w-full">
+            <ArchitectureMap files={filteredFiles} />
+          </div>
+        ) : activeTab === "fileStructure" ? (
+          <div className="w-full">
+            <FileStructureTab 
+              files={filteredFiles} 
+              totalImportedFiles={totalImportedFiles}
+            />
+          </div>
+        ) : activeTab === "codeAnalysis" ? (
+          <div className="w-full">
+            <CodeAnalysisTab files={filteredFiles} />
+          </div>
+        ) : activeTab === "designSystem" ? (
+          <div className="w-full">
+            <DesignSystemTab files={filteredFiles} />
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

@@ -527,8 +527,8 @@ export const DependencyVisualizer: React.FC<DependencyVisualizerProps> = ({ file
           className="w-full h-full"
           onClick={handleCanvasClick}
         />
-      </div>
-      
+        </div>
+        
       {selectedNode && (
         <div className="absolute bottom-4 left-4 right-4 bg-white rounded-lg shadow-lg p-4">
           <h3 className="font-medium">{selectedNode.file.name}</h3>
