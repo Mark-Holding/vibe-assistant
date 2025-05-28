@@ -14,11 +14,16 @@ import { FileData } from "../../types/code-analyzer";
 import { FileStructureTab } from "../../components/code-analyzer/file-structure/FileStructureTab";
 import CodeAnalysisTab from "../../components/code-analyzer/code-analysis/CodeAnalysisTab";
 import DesignSystemTab from "../../components/code-analyzer/design-system/DesignSystemTab";
+import { projectService } from "../../lib/database/projects";
+import { fileService } from "../../lib/database/files";
 
 export default function CodeAnalyzerPage() {
   const [activeTab, setActiveTab] = useState<
     "linkCodebase" | "fileStructure" | "codeAnalysis" | "designSystem" | "dependencies" | "codebaseMap"
   >("linkCodebase");
+
+  const [currentProjectId, setCurrentProjectId] = useState<string>('');
+  const [currentProjectName, setCurrentProjectName] = useState<string>('');
 
   const {
     files,
@@ -26,18 +31,78 @@ export default function CodeAnalyzerPage() {
     handleFileUpload,
   } = useFileAnalysis();
 
+  // Project creation handler
+  const handleProjectCreated = useCallback((projectId: string, projectName: string) => {
+    setCurrentProjectId(projectId);
+    setCurrentProjectName(projectName);
+    // Switch to File Structure tab after project creation
+    setActiveTab("fileStructure");
+  }, []);
+
   // Project selection handlers
-  const handleProjectChange = (projectId: string) => {
-    // TODO: Load project data from the database
-    console.log('Project changed:', projectId);
-  };
+  const handleProjectChange = useCallback(async (projectId: string) => {
+    try {
+      // Load project data from the database
+      const project = await projectService.getProject(projectId);
+      if (project) {
+        setCurrentProjectId(projectId);
+        setCurrentProjectName(project.name);
+        
+        // Load project files
+        const projectFiles = await fileService.getProjectFiles(projectId);
+        
+        // Convert database files back to FileData format
+        const fileDataArray: FileData[] = await Promise.all(
+          projectFiles.map(async (dbFile: any) => {
+            const content = await fileService.getFileContent(dbFile.id);
+            const file = new File([content], dbFile.name, {
+              type: dbFile.file_type,
+              lastModified: new Date(dbFile.last_modified).getTime()
+            });
+            
+            return {
+              name: dbFile.name,
+              path: dbFile.relative_path,
+              size: dbFile.size_bytes,
+              type: dbFile.file_type,
+              lastModified: new Date(dbFile.last_modified),
+              content: content,
+              category: dbFile.category,
+              importance: dbFile.importance_score,
+              file: file
+            };
+          })
+        );
+        
+        handleFileUpload(fileDataArray);
+        setActiveTab("fileStructure");
+      }
+    } catch (error) {
+      console.error('Error loading project:', error);
+      alert('Failed to load project');
+    }
+  }, [handleFileUpload]);
 
-  const handleProjectDelete = (projectId: string) => {
-    // TODO: Delete project from the database
-    console.log('Project deleted:', projectId);
-  };
+  const handleProjectDelete = useCallback(async (projectId: string) => {
+    try {
+      await projectService.deleteProject(projectId);
+      
+      // If the deleted project was the current one, reset state
+      if (projectId === currentProjectId) {
+        setCurrentProjectId('');
+        setCurrentProjectName('');
+        handleFileUpload([]); // Clear files
+        setActiveTab("linkCodebase");
+      }
+      
+      alert('Project deleted successfully');
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      alert('Failed to delete project');
+    }
+  }, [currentProjectId, handleFileUpload]);
 
-  // Check for files in localStorage on mount
+  // Check for files in localStorage on mount (for backward compatibility)
   useEffect(() => {
     try {
       const storedFiles = localStorage.getItem('uploadedFiles');
@@ -83,7 +148,7 @@ export default function CodeAnalyzerPage() {
     }
   }, [handleFileUpload]);
 
-  // Directly handle FileData[]
+  // Directly handle FileData[] (for backward compatibility)
   const onFilesUploaded = (uploadedFiles: FileData[]) => {
     handleFileUpload(uploadedFiles);
     // Switch to File Structure tab after uploading files
@@ -134,6 +199,8 @@ export default function CodeAnalyzerPage() {
             <div className="flex items-center space-x-4">
               <h1 className="text-2xl font-bold text-gray-900">Code Analyzer</h1>
               <ProjectSelector
+                currentProjectId={currentProjectId}
+                currentProjectName={currentProjectName}
                 onProjectChange={handleProjectChange}
                 onProjectDelete={handleProjectDelete}
               />
@@ -207,7 +274,10 @@ export default function CodeAnalyzerPage() {
         {/* Tab content */}
         {activeTab === "linkCodebase" ? (
           <div className="w-full">
-            <LinkCodebaseTab onFilesUploaded={onFilesUploaded} />
+            <LinkCodebaseTab 
+              onFilesUploaded={onFilesUploaded}
+              onProjectCreated={handleProjectCreated}
+            />
           </div>
         ) : activeTab === "dependencies" ? (
           <div className="w-full">

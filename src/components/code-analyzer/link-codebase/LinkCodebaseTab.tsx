@@ -1,25 +1,158 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Link, Folder, BarChart3, Network, Github, Upload } from 'lucide-react';
+import { Link, Folder, BarChart3, Network, Github, Upload, Loader2 } from 'lucide-react';
 import { FileUploader } from '../FileUploader';
 import { FileData } from '../../../types/code-analyzer';
 import { Button } from '../../ui/Button';
+import { projectService } from '../../../lib/database/projects';
+import { fileService } from '../../../lib/database/files';
+import { isSupabaseConfigured } from '../../../lib/supabase';
+import { debugEnvironment } from '../../../lib/debug-env';
 
 interface LinkCodebaseTabProps {
   onFilesUploaded: (files: FileData[]) => void;
+  onProjectCreated?: (projectId: string, projectName: string) => void;
 }
 
-export const LinkCodebaseTab: React.FC<LinkCodebaseTabProps> = ({ onFilesUploaded }) => {
+export const LinkCodebaseTab: React.FC<LinkCodebaseTabProps> = ({ 
+  onFilesUploaded, 
+  onProjectCreated 
+}) => {
   const [projectName, setProjectName] = useState('');
   const [selectedMethod, setSelectedMethod] = useState<'upload' | 'github'>('upload');
   const [githubUrl, setGithubUrl] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<FileData[]>([]);
+  const [error, setError] = useState<string>('');
 
-  const handleSubmit = () => {
-    // TODO: Handle project creation and file upload
-    console.log('Project Name:', projectName);
-    if (selectedMethod === 'github') {
-      console.log('GitHub URL:', githubUrl);
+  // Debug environment variables on component mount
+  React.useEffect(() => {
+    debugEnvironment();
+  }, []);
+
+  const handleFilesUploaded = (files: FileData[]) => {
+    setUploadedFiles(files);
+    // Don't call onFilesUploaded here - wait until database processing is complete
+  };
+
+  const handleSubmit = async () => {
+    // Check if Supabase is properly configured
+    if (!isSupabaseConfigured()) {
+      setError('Database not configured. Please check your environment variables in .env.local');
+      return;
+    }
+
+    if (!projectName.trim()) {
+      setError('Please enter a project name');
+      return;
+    }
+
+    if (selectedMethod === 'upload' && uploadedFiles.length === 0) {
+      setError('Please upload files first');
+      return;
+    }
+
+    if (selectedMethod === 'github' && !githubUrl.trim()) {
+      setError('Please enter a GitHub URL');
+      return;
+    }
+
+    setIsProcessing(true);
+    setError('');
+
+    try {
+      // Create project in database
+      const project = await projectService.createProject({
+        name: projectName.trim(),
+        description: `Project created via ${selectedMethod === 'upload' ? 'file upload' : 'GitHub integration'}`,
+        repository_url: selectedMethod === 'github' ? githubUrl.trim() : undefined
+      });
+
+      console.log('Project created:', project);
+
+      if (selectedMethod === 'upload' && uploadedFiles.length > 0) {
+        // Filter relevant files (same logic as before)
+        const relevantFiles = uploadedFiles.filter(file => {
+          if (!file || !file.path) return false;
+          const excludeDirs = [
+            '/node_modules/', '/.git/', '/dist/', '/build/', '/out/', '/.next/', '/.vercel/'
+          ];
+          const ext = file.path.split('.').pop()?.toLowerCase();
+          const allowedExts = ['js', 'jsx', 'ts', 'tsx', 'json', 'css', 'scss', 'md'];
+          
+          if (
+            file.path.startsWith('.') ||
+            file.name.startsWith('.') ||
+            excludeDirs.some(dir => file.path.includes(dir))
+          ) {
+            return false;
+          }
+          
+          if (!ext || !allowedExts.includes(ext)) {
+            return false;
+          }
+          
+          return true;
+        });
+
+        console.log(`Processing ${relevantFiles.length} relevant files out of ${uploadedFiles.length} total files`);
+
+        // Analyze and save files to database
+        console.log('📁 Starting file analysis and database storage...');
+        await fileService.analyzeAndSaveFiles(project.id, relevantFiles);
+        console.log('✅ Files analyzed and stored in database');
+
+        // Calculate actual stats from analyzed files
+        console.log('📊 Calculating project statistics...');
+        let totalFunctions = 0;
+        let totalComponents = 0;
+        let totalLoc = 0;
+
+        for (const file of relevantFiles) {
+          try {
+            const content = await file.file.text();
+            const analysis = await fileService.analyzeFileContent(content, file.path);
+            totalFunctions += analysis.functionCount;
+            totalComponents += analysis.componentCount;
+            totalLoc += analysis.linesOfCode;
+          } catch (error) {
+            console.warn(`Error analyzing ${file.path}:`, error);
+          }
+        }
+
+        // Update project stats
+        const stats = {
+          total_files: relevantFiles.length,
+          total_loc: totalLoc,
+          total_functions: totalFunctions,
+          total_components: totalComponents
+        };
+
+        await projectService.updateProjectStats(project.id, stats);
+        console.log('📈 Project statistics updated:', stats);
+
+        // Now call onFilesUploaded to update the UI with the processed files
+        onFilesUploaded(relevantFiles);
+      }
+
+      // Notify parent component
+      if (onProjectCreated) {
+        onProjectCreated(project.id, project.name);
+      }
+
+      // Reset form
+      setProjectName('');
+      setGithubUrl('');
+      setUploadedFiles([]);
+      
+      alert(`Project "${project.name}" created successfully!`);
+
+    } catch (error) {
+      console.error('Error creating project:', error);
+      setError(error instanceof Error ? error.message : 'Failed to create project');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -36,10 +169,17 @@ export const LinkCodebaseTab: React.FC<LinkCodebaseTabProps> = ({ onFilesUploade
       </div>
       
       <div className="bg-white rounded-lg shadow-lg p-8">
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
+            <p className="text-red-600 text-sm">{error}</p>
+          </div>
+        )}
+
         {/* Project Name Input */}
         <div className="mb-8">
           <label htmlFor="projectName" className="block text-sm font-medium text-gray-700 mb-2">
-            Project Name
+            Project Name *
           </label>
           <input
             type="text"
@@ -48,6 +188,7 @@ export const LinkCodebaseTab: React.FC<LinkCodebaseTabProps> = ({ onFilesUploade
             onChange={(e) => setProjectName(e.target.value)}
             placeholder="Enter project name"
             className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            disabled={isProcessing}
           />
         </div>
 
@@ -59,11 +200,12 @@ export const LinkCodebaseTab: React.FC<LinkCodebaseTabProps> = ({ onFilesUploade
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <button
               onClick={() => setSelectedMethod('upload')}
-              className={`p-6 border rounded-lg flex flex-col items-center ${
+              disabled={isProcessing}
+              className={`p-6 border rounded-lg flex flex-col items-center transition-colors ${
                 selectedMethod === 'upload'
                   ? 'border-blue-500 bg-blue-50'
                   : 'border-gray-200 hover:border-blue-300'
-              }`}
+              } ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <Upload size={32} className={`mb-3 ${selectedMethod === 'upload' ? 'text-blue-600' : 'text-gray-600'}`} />
               <h3 className="font-semibold text-gray-900 mb-2">Upload Files</h3>
@@ -74,11 +216,12 @@ export const LinkCodebaseTab: React.FC<LinkCodebaseTabProps> = ({ onFilesUploade
 
             <button
               onClick={() => setSelectedMethod('github')}
-              className={`p-6 border rounded-lg flex flex-col items-center ${
+              disabled={isProcessing}
+              className={`p-6 border rounded-lg flex flex-col items-center transition-colors ${
                 selectedMethod === 'github'
                   ? 'border-blue-500 bg-blue-50'
                   : 'border-gray-200 hover:border-blue-300'
-              }`}
+              } ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <Github size={32} className={`mb-3 ${selectedMethod === 'github' ? 'text-blue-600' : 'text-gray-600'}`} />
               <h3 className="font-semibold text-gray-900 mb-2">Connect GitHub</h3>
@@ -92,12 +235,19 @@ export const LinkCodebaseTab: React.FC<LinkCodebaseTabProps> = ({ onFilesUploade
         {/* Upload Method Content */}
         {selectedMethod === 'upload' ? (
           <div className="mb-8">
-            <FileUploader onFilesUploaded={onFilesUploaded} />
+            <FileUploader onFilesUploaded={handleFilesUploaded} />
+            {uploadedFiles.length > 0 && (
+              <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-md">
+                <p className="text-green-600 text-sm">
+                  ✓ {uploadedFiles.length} files uploaded and ready for analysis
+                </p>
+              </div>
+            )}
           </div>
         ) : (
           <div className="mb-8">
             <label htmlFor="githubUrl" className="block text-sm font-medium text-gray-700 mb-2">
-              GitHub Repository URL
+              GitHub Repository URL *
             </label>
             <input
               type="text"
@@ -106,17 +256,33 @@ export const LinkCodebaseTab: React.FC<LinkCodebaseTabProps> = ({ onFilesUploade
               onChange={(e) => setGithubUrl(e.target.value)}
               placeholder="https://github.com/username/repository"
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              disabled={isProcessing}
             />
+            <p className="mt-2 text-sm text-gray-500">
+              Note: GitHub integration is coming soon. For now, please use file upload.
+            </p>
           </div>
         )}
 
         {/* Submit Button */}
         <Button
           onClick={handleSubmit}
-          disabled={!projectName || (selectedMethod === 'github' && !githubUrl)}
+          disabled={
+            isProcessing || 
+            !projectName.trim() || 
+            (selectedMethod === 'upload' && uploadedFiles.length === 0) ||
+            (selectedMethod === 'github' && !githubUrl.trim())
+          }
           className="w-full"
         >
-          Link Codebase
+          {isProcessing ? (
+            <>
+              <Loader2 size={16} className="animate-spin mr-2" />
+              Creating Project & Analyzing Files...
+            </>
+          ) : (
+            'Create Project & Analyze Code'
+          )}
         </Button>
         
         <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
