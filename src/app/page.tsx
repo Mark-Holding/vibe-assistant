@@ -1,5 +1,6 @@
-import { redirect } from 'next/navigation';
+import React from 'react';
+import LandingPage from '../components/landing/LandingPage';
 
 export default function Home() {
-  redirect('/code-analyzer');
+  return <LandingPage />;
 }
