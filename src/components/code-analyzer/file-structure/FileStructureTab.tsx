@@ -12,6 +12,7 @@ interface FileStructureTabProps {
     type: string;
     size: number;
     file: File;
+    category?: string;
   }>;
   totalImportedFiles: number;
 }

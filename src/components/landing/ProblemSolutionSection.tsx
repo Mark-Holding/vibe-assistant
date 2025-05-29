@@ -19,11 +19,15 @@ const ProblemSolutionSection: React.FC = () => {
               </li>
               <li className="flex items-start text-lg text-gray-600">
                 <span className="mr-3 mt-1 text-lg">❌</span>
-                Spend hours just figuring out what files do
+                Spend hours figuring out what files do instead of being productive
               </li>
               <li className="flex items-start text-lg text-gray-600">
                 <span className="mr-3 mt-1 text-lg">❌</span>
                 Fear making changes because you don't understand dependencies
+              </li>
+              <li className="flex items-start text-lg text-gray-600">
+                <span className="mr-3 mt-1 text-lg">❌</span>
+                Imposter syndrome creeps up with every prompt
               </li>
               <li className="flex items-start text-lg text-gray-600">
                 <span className="mr-3 mt-1 text-lg">❌</span>
@@ -49,6 +53,10 @@ const ProblemSolutionSection: React.FC = () => {
               <li className="flex items-start text-lg text-gray-600">
                 <span className="mr-3 mt-1 text-lg">✅</span>
                 See exactly how components connect
+              </li>
+              <li className="flex items-start text-lg text-gray-600">
+                <span className="mr-3 mt-1 text-lg">✅</span>
+                Turn 'I have no idea' into 'Let me show you how this works'
               </li>
               <li className="flex items-start text-lg text-gray-600">
                 <span className="mr-3 mt-1 text-lg">✅</span>

@@ -28,13 +28,22 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
     loadProjects();
   }, []);
 
+  // Refresh projects when currentProjectId changes (new project created)
+  useEffect(() => {
+    if (currentProjectId) {
+      loadProjects();
+    }
+  }, [currentProjectId]);
+
   const loadProjects = async () => {
     try {
       setIsLoading(true);
+      console.log('🔍 Loading projects from database...');
       const projectList = await projectService.getProjects();
+      console.log('📋 Projects loaded:', projectList);
       setProjects(projectList);
     } catch (error) {
-      console.error('Error loading projects:', error);
+      console.error('❌ Error loading projects:', error);
     } finally {
       setIsLoading(false);
     }

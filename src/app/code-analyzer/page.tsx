@@ -29,15 +29,62 @@ export default function CodeAnalyzerPage() {
     files,
     totalImportedFiles,
     handleFileUpload,
+    loadPreAnalyzedFiles,
   } = useFileAnalysis();
 
   // Project creation handler
-  const handleProjectCreated = useCallback((projectId: string, projectName: string) => {
+  const handleProjectCreated = useCallback(async (projectId: string, projectName: string) => {
+    console.log(`🎉 Project created: ${projectName} (${projectId})`);
     setCurrentProjectId(projectId);
     setCurrentProjectName(projectName);
-    // Switch to File Structure tab after project creation
-    setActiveTab("fileStructure");
-  }, []);
+    
+    // Load the project files from database (they were already analyzed and stored)
+    try {
+      const projectFiles = await fileService.getProjectFiles(projectId);
+      
+      // Convert database files back to FileData format
+      const fileDataArray: FileData[] = await Promise.all(
+        projectFiles.map(async (dbFile: { 
+          id: string; 
+          name: string; 
+          relative_path: string; 
+          size_bytes: number; 
+          file_type: string; 
+          last_modified: string; 
+          category?: string; 
+          importance_score: number; 
+        }) => {
+          const content = await fileService.getFileContent(dbFile.id);
+          const file = new File([content], dbFile.name, {
+            type: dbFile.file_type,
+            lastModified: new Date(dbFile.last_modified).getTime()
+          });
+          
+          return {
+            name: dbFile.name,
+            path: dbFile.relative_path,
+            size: dbFile.size_bytes,
+            type: dbFile.file_type,
+            lastModified: new Date(dbFile.last_modified),
+            content: content,
+            category: dbFile.category,
+            importance: dbFile.importance_score,
+            file: file
+          };
+        })
+      );
+      
+      // Use loadPreAnalyzedFiles to avoid re-analysis
+      loadPreAnalyzedFiles(fileDataArray);
+      setActiveTab("fileStructure");
+      
+      console.log(`✅ Loaded ${fileDataArray.length} files from database for project ${projectName}`);
+    } catch (error) {
+      console.error('Error loading project files after creation:', error);
+      // Fallback to empty state
+      loadPreAnalyzedFiles([]);
+    }
+  }, [loadPreAnalyzedFiles]);
 
   // Project selection handlers
   const handleProjectChange = useCallback(async (projectId: string) => {
@@ -53,7 +100,16 @@ export default function CodeAnalyzerPage() {
         
         // Convert database files back to FileData format
         const fileDataArray: FileData[] = await Promise.all(
-          projectFiles.map(async (dbFile: any) => {
+          projectFiles.map(async (dbFile: { 
+            id: string; 
+            name: string; 
+            relative_path: string; 
+            size_bytes: number; 
+            file_type: string; 
+            last_modified: string; 
+            category?: string; 
+            importance_score: number; 
+          }) => {
             const content = await fileService.getFileContent(dbFile.id);
             const file = new File([content], dbFile.name, {
               type: dbFile.file_type,
@@ -74,33 +130,37 @@ export default function CodeAnalyzerPage() {
           })
         );
         
-        handleFileUpload(fileDataArray);
+        // Use loadPreAnalyzedFiles instead of handleFileUpload to avoid re-analysis
+        loadPreAnalyzedFiles(fileDataArray);
         setActiveTab("fileStructure");
       }
     } catch (error) {
       console.error('Error loading project:', error);
       alert('Failed to load project');
     }
-  }, [handleFileUpload]);
+  }, [loadPreAnalyzedFiles]);
 
   const handleProjectDelete = useCallback(async (projectId: string) => {
     try {
+      console.log(`🗑️ Deleting project: ${projectId}`);
       await projectService.deleteProject(projectId);
       
       // If the deleted project was the current one, reset state
       if (projectId === currentProjectId) {
+        console.log('🧹 Clearing current project state');
         setCurrentProjectId('');
         setCurrentProjectName('');
-        handleFileUpload([]); // Clear files
+        loadPreAnalyzedFiles([]); // Clear files properly
         setActiveTab("linkCodebase");
       }
       
+      console.log('✅ Project deleted successfully');
       alert('Project deleted successfully');
     } catch (error) {
-      console.error('Error deleting project:', error);
+      console.error('❌ Error deleting project:', error);
       alert('Failed to delete project');
     }
-  }, [currentProjectId, handleFileUpload]);
+  }, [currentProjectId, loadPreAnalyzedFiles]);
 
   // Check for files in localStorage on mount (for backward compatibility)
   useEffect(() => {

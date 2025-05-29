@@ -1,5 +1,4 @@
 import { supabase } from '../supabase'
-import { FileData } from '../../types/code-analyzer'
 
 export interface Project {
   id: string
@@ -61,12 +60,18 @@ export const projectService = {
 
   // Get all projects
   async getProjects(): Promise<Project[]> {
+    console.log('🔍 Querying projects table...');
     const { data, error } = await supabase
       .from('projects')
       .select('*')
       .order('updated_at', { ascending: false })
 
-    if (error) throw error
+    if (error) {
+      console.error('❌ Database error in getProjects:', error);
+      throw error;
+    }
+    
+    console.log('✅ Projects query successful, found:', data?.length || 0, 'projects');
     return data || []
   },
 

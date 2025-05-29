@@ -47,25 +47,20 @@ export const FileTypeUtils = {
     }
   },
 
-  // Build file tree structure using categorizeByAST
-  buildFileTree: async (files: Array<{ name: string; path: string; size: number; file: File }>): Promise<FileNode> => {
+  // Build file tree structure using pre-analyzed category data
+  buildFileTree: async (files: Array<{ 
+    name: string; 
+    path: string; 
+    size: number; 
+    file: File;
+    category?: string; // Use pre-analyzed category
+  }>): Promise<FileNode> => {
     const root: FileNode = {
       name: 'root',
       type: 'folder',
       children: [],
       path: ''
     };
-
-    // Pre-read all file contents and categorize
-    const fileCategories: Record<string, string> = {};
-    await Promise.all(files.map(async file => {
-      let content = '';
-      try {
-        content = await file.file.text();
-      } catch {}
-      const { category } = categorizeByAST(content, file.path);
-      fileCategories[file.path] = category;
-    }));
 
     files.forEach(file => {
       const pathParts = file.path.split('/').filter(part => part.length > 0);
@@ -82,8 +77,8 @@ export const FileTypeUtils = {
         let existingNode = currentNode.children.find(child => child.name === part);
 
         if (!existingNode) {
-          // Use category for color mapping
-          const category = isLastPart ? fileCategories[file.path] : undefined;
+          // Use pre-analyzed category for color mapping
+          const category = isLastPart ? file.category : undefined;
           let color = '#9ca3af';
           let label = category;
           if (category) {
@@ -153,17 +148,21 @@ export const FileTypeUtils = {
     }
   },
 
-  // Calculate file type breakdown with accurate function counts and categorizeByAST
-  async calculateFileTypeBreakdown(files: Array<{ name: string; path: string; size: number; file: File }>): Promise<Record<string, FileTypeData>> {
+  // Calculate file type breakdown with pre-analyzed category data
+  async calculateFileTypeBreakdown(files: Array<{ 
+    name: string; 
+    path: string; 
+    size: number; 
+    file: File;
+    category?: string; // Use pre-analyzed category
+  }>): Promise<Record<string, FileTypeData>> {
     const breakdown: Record<string, FileTypeData> = {};
     let totalFunctions = 0;
 
     await Promise.all(files.map(async file => {
-      let content = '';
-      try {
-        content = await file.file.text();
-      } catch {}
-      const { category } = categorizeByAST(content, file.path);
+      // Use pre-analyzed category instead of re-analyzing
+      const category = file.category || 'other';
+      
       // Map category to color and label
       const mapped = FileTypeUtils.categorizeFile(category);
       const color = mapped.color;

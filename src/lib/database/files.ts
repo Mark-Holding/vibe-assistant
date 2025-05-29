@@ -17,23 +17,74 @@ function createHash(content: string): string {
 }
 
 export const fileService = {
+  // Test database connection
+  async testConnection(): Promise<boolean> {
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('id')
+        .limit(1)
+
+      if (error) {
+        console.error('❌ Database connection test failed:', error);
+        return false;
+      }
+      
+      console.log('✅ Database connection successful');
+      return true;
+    } catch (error) {
+      console.error('❌ Database connection error:', error);
+      return false;
+    }
+  },
+
   // Check if file has changed (by hash)
   async hasFileChanged(projectId: string, relativePath: string, contentHash: string): Promise<boolean> {
-    const { data, error } = await supabase
-      .from('files')
-      .select('content_hash')
-      .eq('project_id', projectId)
-      .eq('relative_path', relativePath)
-      .single()
+    try {
+      console.log(`🔍 Checking file changes for: ${relativePath}`);
+      console.log(`   Project ID: ${projectId}`);
+      console.log(`   Content Hash: ${contentHash}`);
+      
+      // Normalize the path to ensure consistent comparison
+      const normalizedPath = relativePath.replace(/\\/g, '/');
+      
+      const { data, error } = await supabase
+        .from('files')
+        .select('content_hash')
+        .eq('project_id', projectId)
+        .eq('relative_path', normalizedPath)
+        .maybeSingle() // Use maybeSingle instead of single to avoid errors when no rows found
 
-    if (error && error.code !== 'PGRST116') throw error
-    if (!data) return true // File doesn't exist, so it's "changed"
-    
-    return data.content_hash !== contentHash
+      if (error) {
+        console.log(`   Database error code: ${error.code}`);
+        console.log(`   Database error message: ${error.message}`);
+        console.log(`   Database error details:`, error.details);
+        console.log(`   Database error hint:`, error.hint);
+        
+        console.warn(`❌ Database query failed for ${relativePath}:`, error);
+        // Return true to process the file anyway
+        return true;
+      }
+      
+      if (!data) {
+        console.log(`   File not found in database, treating as changed`);
+        return true; // File doesn't exist, so it's "changed"
+      }
+      
+      const hasChanged = data.content_hash !== contentHash;
+      console.log(`   File ${hasChanged ? 'has changed' : 'unchanged'} (DB: ${data.content_hash}, New: ${contentHash})`);
+      return hasChanged;
+    } catch (error) {
+      console.warn(`💥 Error checking file changes for ${relativePath}:`, error);
+      // Return true to process the file anyway
+      return true;
+    }
   },
 
   // Analyze and save files to database
   async analyzeAndSaveFiles(projectId: string, files: FileData[]): Promise<void> {
+    console.log(`🔍 Starting analysis of ${files.length} files for project ${projectId}`);
+    
     const filesToProcess: any[] = []
     const fileContents: any[] = []
 
@@ -42,21 +93,25 @@ export const fileService = {
         const content = await file.file.text()
         const contentHash = createHash(content)
         
-        // Check if file has changed
-        const hasChanged = await this.hasFileChanged(projectId, file.path, contentHash)
+        // Normalize paths to ensure consistency
+        const normalizedPath = file.path.replace(/\\/g, '/');
+        
+        // Check if file has changed (with error handling)
+        const hasChanged = await this.hasFileChanged(projectId, normalizedPath, contentHash)
         if (!hasChanged) {
-          console.log(`Skipping unchanged file: ${file.path}`)
+          console.log(`⏭️ Skipping unchanged file: ${normalizedPath}`)
           continue
         }
 
+        console.log(`📝 Processing file: ${normalizedPath}`)
         // Analyze file content
-        const analysis = await this.analyzeFileContent(content, file.path)
+        const analysis = await this.analyzeFileContent(content, normalizedPath)
         
         const fileData = {
           project_id: projectId,
           name: file.name,
-          path: file.path,
-          relative_path: file.path,
+          path: normalizedPath,
+          relative_path: normalizedPath,
           size_bytes: file.size,
           file_type: file.type,
           extension: file.name.split('.').pop() || '',
@@ -80,7 +135,7 @@ export const fileService = {
         filesToProcess.push(fileData)
         fileContents.push({
           content: content,
-          relative_path: file.path
+          relative_path: normalizedPath
         })
 
       } catch (error) {
@@ -94,6 +149,9 @@ export const fileService = {
     }
 
     // Insert/update files in batches
+    console.log(`💾 Upserting ${filesToProcess.length} files to database...`);
+    console.log('Sample file data:', JSON.stringify(filesToProcess[0], null, 2));
+    
     const { data: insertedFiles, error: filesError } = await supabase
       .from('files')
       .upsert(filesToProcess, { 
@@ -102,7 +160,16 @@ export const fileService = {
       })
       .select('id, relative_path')
 
-    if (filesError) throw filesError
+    if (filesError) {
+      console.error('❌ Files upsert error:', filesError);
+      console.error('   Error code:', filesError.code);
+      console.error('   Error message:', filesError.message);
+      console.error('   Error details:', filesError.details);
+      console.error('   Error hint:', filesError.hint);
+      throw filesError;
+    }
+
+    console.log(`✅ Successfully upserted ${insertedFiles?.length || 0} files`);
 
     // Insert file contents
     const contentInserts = insertedFiles?.map((file, index) => ({
@@ -113,11 +180,27 @@ export const fileService = {
     })) || []
 
     if (contentInserts.length > 0) {
+      console.log(`💾 Upserting ${contentInserts.length} file contents...`);
+      console.log('Sample content data:', {
+        file_id: contentInserts[0].file_id,
+        content_length: contentInserts[0].content.length,
+        created_at: contentInserts[0].created_at
+      });
+      
       const { error: contentError } = await supabase
         .from('file_contents')
         .upsert(contentInserts, { onConflict: 'file_id' })
 
-      if (contentError) throw contentError
+      if (contentError) {
+        console.error('❌ File contents upsert error:', contentError);
+        console.error('   Error code:', contentError.code);
+        console.error('   Error message:', contentError.message);
+        console.error('   Error details:', contentError.details);
+        console.error('   Error hint:', contentError.hint);
+        throw contentError;
+      }
+      
+      console.log(`✅ Successfully upserted ${contentInserts.length} file contents`);
     }
 
     console.log(`Successfully processed ${filesToProcess.length} files`)

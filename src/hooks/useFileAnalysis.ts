@@ -34,8 +34,17 @@ export const useFileAnalysis = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Load pre-analyzed files from database (no re-analysis)
+  const loadPreAnalyzedFiles = useCallback((preAnalyzedFiles: FileData[]) => {
+    console.log('📂 Loading pre-analyzed files from database (no re-analysis needed)');
+    setTotalImportedFiles(preAnalyzedFiles.length);
+    setFiles(preAnalyzedFiles);
+    setError(null);
+  }, []);
+
   const handleFileUpload = useCallback(async (uploadedFiles: FileData[]) => {
     try {
+      console.log('🔍 Analyzing new files...');
       // Store total count before filtering
       setTotalImportedFiles(uploadedFiles.length);
       
@@ -98,6 +107,7 @@ export const useFileAnalysis = () => {
     isLoading,
     error,
     handleFileUpload,
-    handleFileSelect
+    handleFileSelect,
+    loadPreAnalyzedFiles
   };
 }; 

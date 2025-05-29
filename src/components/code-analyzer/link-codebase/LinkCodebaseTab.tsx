@@ -11,7 +11,7 @@ import { isSupabaseConfigured } from '../../../lib/supabase';
 import { debugEnvironment } from '../../../lib/debug-env';
 
 interface LinkCodebaseTabProps {
-  onFilesUploaded: (files: FileData[]) => void;
+  onFilesUploaded?: (files: FileData[]) => void;
   onProjectCreated?: (projectId: string, projectName: string) => void;
 }
 
@@ -40,6 +40,13 @@ export const LinkCodebaseTab: React.FC<LinkCodebaseTabProps> = ({
     // Check if Supabase is properly configured
     if (!isSupabaseConfigured()) {
       setError('Database not configured. Please check your environment variables in .env.local');
+      return;
+    }
+
+    // Test database connection
+    const isConnected = await fileService.testConnection();
+    if (!isConnected) {
+      setError('Cannot connect to database. Please check your Supabase setup and ensure the schema is created.');
       return;
     }
 
@@ -103,37 +110,22 @@ export const LinkCodebaseTab: React.FC<LinkCodebaseTabProps> = ({
         await fileService.analyzeAndSaveFiles(project.id, relevantFiles);
         console.log('✅ Files analyzed and stored in database');
 
-        // Calculate actual stats from analyzed files
-        console.log('📊 Calculating project statistics...');
-        let totalFunctions = 0;
-        let totalComponents = 0;
-        let totalLoc = 0;
-
-        for (const file of relevantFiles) {
-          try {
-            const content = await file.file.text();
-            const analysis = await fileService.analyzeFileContent(content, file.path);
-            totalFunctions += analysis.functionCount;
-            totalComponents += analysis.componentCount;
-            totalLoc += analysis.linesOfCode;
-          } catch (error) {
-            console.warn(`Error analyzing ${file.path}:`, error);
-          }
-        }
-
-        // Update project stats
+        // Get the analyzed files from database to calculate stats (avoid re-analysis)
+        console.log('📊 Calculating project statistics from database...');
+        const analyzedFiles = await fileService.getProjectFiles(project.id);
+        
         const stats = {
-          total_files: relevantFiles.length,
-          total_loc: totalLoc,
-          total_functions: totalFunctions,
-          total_components: totalComponents
+          total_files: analyzedFiles.length,
+          total_loc: analyzedFiles.reduce((sum, file) => sum + (file.lines_of_code || 0), 0),
+          total_functions: analyzedFiles.reduce((sum, file) => sum + (file.function_count || 0), 0),
+          total_components: analyzedFiles.reduce((sum, file) => sum + (file.component_count || 0), 0)
         };
 
         await projectService.updateProjectStats(project.id, stats);
         console.log('📈 Project statistics updated:', stats);
 
-        // Now call onFilesUploaded to update the UI with the processed files
-        onFilesUploaded(relevantFiles);
+        // Don't call onFilesUploaded here - let the parent component handle loading from database
+        // onFilesUploaded(relevantFiles); // REMOVED - this was causing duplicate analysis
       }
 
       // Notify parent component
