@@ -88,7 +88,7 @@ export const FileStructureTab: React.FC<FileStructureTabProps> = ({ files, total
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
             </div>
           ) : (
-            <div className="max-h-96 overflow-y-auto">
+            <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 300px)' }}>
               {fileTree && fileTree.children && (
                 <FileTree 
                   tree={fileTree} 

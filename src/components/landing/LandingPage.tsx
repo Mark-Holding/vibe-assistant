@@ -85,7 +85,7 @@ const LandingPage: React.FC = () => {
             <button onClick={scrollToDemo} className="text-gray-700 hover:text-[#667eea] transition-colors">Demo</button>
             <button onClick={() => document.getElementById('features-section')?.scrollIntoView({ behavior: 'smooth' })} className="text-gray-700 hover:text-[#667eea] transition-colors">Features</button>
             <button onClick={() => document.getElementById('pricing-section')?.scrollIntoView({ behavior: 'smooth' })} className="text-gray-700 hover:text-[#667eea] transition-colors">Pricing</button>
-            <button onClick={() => router.push('/sign-in')} className="ml-2 text-gray-700 hover:text-[#667eea] transition-colors">Sign In</button>
+            <button onClick={() => router.push('/auth')} className="ml-2 text-gray-700 hover:text-[#667eea] transition-colors">Sign In</button>
           </nav>
           <button
             onClick={() => setShowUploadModal(true)}
