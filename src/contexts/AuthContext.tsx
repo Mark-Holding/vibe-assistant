@@ -1,14 +1,14 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, authService } from '../lib/auth/authService';
+import { supabaseAuthService, type User } from '../lib/auth/supabaseAuth';
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   signOut: () => Promise<void>;
-  refreshUser: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,20 +21,49 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const refreshUser = () => {
-    const currentUser = authService.getCurrentUser();
-    setUser(currentUser);
+  const refreshUser = async () => {
+    try {
+      const currentUser = await supabaseAuthService.getUser();
+      setUser(currentUser);
+    } catch (error) {
+      console.error('Error refreshing user:', error);
+      setUser(null);
+    }
   };
 
   useEffect(() => {
-    // Check for existing user on mount
-    refreshUser();
-    setIsLoading(false);
+    // Get initial session
+    const initializeAuth = async () => {
+      try {
+        await refreshUser();
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializeAuth();
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabaseAuthService.onAuthStateChange((user) => {
+      setUser(user);
+      setIsLoading(false);
+    });
+
+    // Cleanup subscription on unmount
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
-    await authService.signOut();
-    setUser(null);
+    try {
+      await supabaseAuthService.signOut();
+      setUser(null);
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   const value: AuthContextType = {

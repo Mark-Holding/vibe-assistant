@@ -1,33 +1,30 @@
+import { createBrowserClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 
-// Get environment variables
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-// Validate required environment variables
 if (!supabaseUrl) {
-  console.error('❌ Missing NEXT_PUBLIC_SUPABASE_URL environment variable')
-  console.error('Please check your .env.local file')
+  throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL environment variable')
 }
 
 if (!supabaseAnonKey) {
-  console.error('❌ Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable')
-  console.error('Please check your .env.local file')
+  throw new Error('Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable')
 }
 
-// Create Supabase client with fallback values to prevent crashes
-export const supabase = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseAnonKey || 'placeholder-key'
-)
+// Create a client for browser usage with auth support
+export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey)
 
 // For server-side operations that need elevated permissions
-export const supabaseAdmin = supabaseServiceKey && supabaseUrl
+export const supabaseAdmin = supabaseServiceKey 
   ? createClient(supabaseUrl, supabaseServiceKey)
   : null
 
-// Export a function to check if Supabase is properly configured
-export const isSupabaseConfigured = () => {
+// Check if Supabase is properly configured
+export const isSupabaseConfigured = (): boolean => {
   return !!(supabaseUrl && supabaseAnonKey)
-} 
+}
+
+// Export for backward compatibility
+export default supabase 

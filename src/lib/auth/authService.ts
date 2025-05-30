@@ -70,6 +70,33 @@ class AuthService {
     }
   }
 
+  async signInWithGoogle(): Promise<AuthResponse> {
+    try {
+      // TODO: Implement Google OAuth
+      console.log('Initiating Google OAuth...');
+      
+      // Simulate OAuth flow
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Mock successful response
+      const user: User = {
+        id: '2',
+        email: 'user@gmail.com',
+        name: 'Google User',
+        avatar: 'https://lh3.googleusercontent.com/a/default-user=s96-c',
+      };
+
+      localStorage.setItem('user', JSON.stringify(user));
+      
+      return { success: true, user };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Google authentication failed' 
+      };
+    }
+  }
+
   async signInWithGitHub(): Promise<AuthResponse> {
     try {
       // TODO: Implement GitHub OAuth
@@ -80,7 +107,7 @@ class AuthService {
       
       // Mock successful response
       const user: User = {
-        id: '1',
+        id: '3',
         email: 'user@github.com',
         name: 'GitHub User',
         avatar: 'https://github.com/github.png',

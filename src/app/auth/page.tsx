@@ -5,30 +5,36 @@ import { useRouter } from 'next/navigation';
 import { AuthHeader } from '../../components/auth/AuthHeader';
 import { AuthForm, AuthFormData } from '../../components/auth/AuthForm';
 import { AuthFooter } from '../../components/auth/AuthFooter';
-import { authService } from '../../lib/auth/authService';
+import { supabaseAuthService } from '../../lib/auth/supabaseAuth';
 import { useAuth } from '../../contexts/AuthContext';
 
 const AuthPage: React.FC = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>('');
+  const [successMessage, setSuccessMessage] = useState<string>('');
   const router = useRouter();
   const { refreshUser } = useAuth();
 
   const handleSubmit = async (formData: AuthFormData) => {
     setIsLoading(true);
     setError('');
+    setSuccessMessage('');
 
     try {
       const response = isSignUp 
-        ? await authService.signUp(formData)
-        : await authService.signIn(formData.email, formData.password, formData.rememberMe);
+        ? await supabaseAuthService.signUp(formData.email, formData.password, formData.name)
+        : await supabaseAuthService.signIn(formData.email, formData.password);
 
       if (response.success) {
-        // Refresh user state in context
-        refreshUser();
-        // Redirect to dashboard or code analyzer
-        router.push('/code-analyzer');
+        if (isSignUp) {
+          setSuccessMessage('Account created! Please check your email for verification.');
+        } else {
+          // Refresh user state in context
+          await refreshUser();
+          // Redirect to dashboard or code analyzer
+          router.push('/code-analyzer');
+        }
       } else {
         setError(response.error || 'Authentication failed');
       }
@@ -39,23 +45,40 @@ const AuthPage: React.FC = () => {
     }
   };
 
+  const handleGoogleAuth = async () => {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await supabaseAuthService.signInWithGoogle();
+      
+      if (!response.success) {
+        setError(response.error || 'Google authentication failed');
+        setIsLoading(false);
+      }
+      // If successful, the user will be redirected by OAuth
+      // Loading state will be cleared by the auth state change
+    } catch (err) {
+      setError('An unexpected error occurred');
+      setIsLoading(false);
+    }
+  };
+
   const handleGitHubAuth = async () => {
     setIsLoading(true);
     setError('');
 
     try {
-      const response = await authService.signInWithGitHub();
+      const response = await supabaseAuthService.signInWithGitHub();
       
-      if (response.success) {
-        // Refresh user state in context
-        refreshUser();
-        router.push('/code-analyzer');
-      } else {
+      if (!response.success) {
         setError(response.error || 'GitHub authentication failed');
+        setIsLoading(false);
       }
+      // If successful, the user will be redirected by OAuth
+      // Loading state will be cleared by the auth state change
     } catch (err) {
       setError('An unexpected error occurred');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -63,6 +86,7 @@ const AuthPage: React.FC = () => {
   const handleToggleMode = () => {
     setIsSignUp(!isSignUp);
     setError('');
+    setSuccessMessage('');
   };
 
   return (
@@ -75,10 +99,17 @@ const AuthPage: React.FC = () => {
             <p className="text-red-600 text-sm">{error}</p>
           </div>
         )}
+
+        {successMessage && (
+          <div className="bg-green-50 border border-green-200 rounded-md p-4">
+            <p className="text-green-600 text-sm">{successMessage}</p>
+          </div>
+        )}
         
         <AuthForm
           isSignUp={isSignUp}
           onSubmit={handleSubmit}
+          onGoogleAuth={handleGoogleAuth}
           onGitHubAuth={handleGitHubAuth}
           onToggleMode={handleToggleMode}
           isLoading={isLoading}

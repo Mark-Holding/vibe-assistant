@@ -11,6 +11,7 @@
   "dependencies": {
     "@babel/parser": "^7.27.2",
     "@babel/traverse": "^7.27.1",
+    "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.8",
     "@tanstack/react-virtual": "^3.13.9",
     "dotenv": "^16.5.0",

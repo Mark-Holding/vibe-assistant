@@ -16,6 +16,8 @@ import CodeAnalysisTab from "../../components/code-analyzer/code-analysis/CodeAn
 import DesignSystemTab from "../../components/code-analyzer/design-system/DesignSystemTab";
 import { projectService } from "../../lib/database/projects";
 import { fileService } from "../../lib/database/files";
+import { UserMenu } from "../../components/auth/UserMenu";
+import { ProtectedRoute } from "../../components/auth/ProtectedRoute";
 
 export default function CodeAnalyzerPage() {
   const [activeTab, setActiveTab] = useState<
@@ -251,120 +253,123 @@ export default function CodeAnalyzerPage() {
   const filteredFiles = files.filter(isRelevantSourceFile);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header - now sticky */}
-      <div className="sticky top-0 z-50 bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-gray-900">Code Analyzer</h1>
-              <ProjectSelector
-                currentProjectId={currentProjectId}
-                currentProjectName={currentProjectName}
-                onProjectChange={handleProjectChange}
-                onProjectDelete={handleProjectDelete}
-              />
+    <ProtectedRoute>
+      <div className="min-h-screen bg-gray-50">
+        {/* Header - now sticky */}
+        <div className="sticky top-0 z-50 bg-white shadow">
+          <div className="max-w-7xl mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <h1 className="text-2xl font-bold text-gray-900">Code Analyzer</h1>
+                <ProjectSelector
+                  currentProjectId={currentProjectId}
+                  currentProjectName={currentProjectName}
+                  onProjectChange={handleProjectChange}
+                  onProjectDelete={handleProjectDelete}
+                />
+              </div>
+              <UserMenu />
+            </div>
+          </div>
+
+          {/* Navigation - moved inside header div */}
+          <div className="border-b">
+            <div className="max-w-7xl mx-auto px-4">
+              <nav className="flex space-x-8 pb-3">
+                <Button
+                  variant={activeTab === "linkCodebase" ? "primary" : "outline"}
+                  onClick={() => handleTabChange("linkCodebase")}
+                  className="flex items-center"
+                >
+                  <Link size={20} className="mr-2" />
+                  Link Codebase
+                </Button>
+                <Button
+                  variant={activeTab === "fileStructure" ? "primary" : "outline"}
+                  onClick={() => handleTabChange("fileStructure")}
+                  className="flex items-center"
+                  disabled={files.length === 0}
+                >
+                  <Folder size={20} className="mr-2" />
+                  File Structure
+                </Button>
+                <Button
+                  variant={activeTab === "codeAnalysis" ? "primary" : "outline"}
+                  onClick={() => handleTabChange("codeAnalysis")}
+                  className="flex items-center"
+                  disabled={files.length === 0}
+                >
+                  <BarChart3 size={20} className="mr-2" />
+                  Code Analysis
+                </Button>
+                <Button
+                  variant={activeTab === "designSystem" ? "primary" : "outline"}
+                  onClick={() => handleTabChange("designSystem")}
+                  className="flex items-center"
+                  disabled={files.length === 0}
+                >
+                  🎨
+                  <span className="ml-2">Design System</span>
+                </Button>
+                <Button
+                  variant={activeTab === "dependencies" ? "primary" : "outline"}
+                  onClick={() => handleTabChange("dependencies")}
+                  className="flex items-center"
+                  disabled={files.length === 0}
+                >
+                  <Network size={20} className="mr-2" />
+                  Dependencies
+                </Button>
+                <Button
+                  variant={activeTab === "codebaseMap" ? "primary" : "outline"}
+                  onClick={() => handleTabChange("codebaseMap")}
+                  className="flex items-center"
+                  disabled={files.length === 0}
+                >
+                  🗺️
+                  <span className="ml-2">Codebase Map</span>
+                </Button>
+              </nav>
             </div>
           </div>
         </div>
 
-        {/* Navigation - moved inside header div */}
-        <div className="border-b">
-          <div className="max-w-7xl mx-auto px-4">
-            <nav className="flex space-x-8 pb-3">
-              <Button
-                variant={activeTab === "linkCodebase" ? "primary" : "outline"}
-                onClick={() => handleTabChange("linkCodebase")}
-                className="flex items-center"
-              >
-                <Link size={20} className="mr-2" />
-                Link Codebase
-              </Button>
-              <Button
-                variant={activeTab === "fileStructure" ? "primary" : "outline"}
-                onClick={() => handleTabChange("fileStructure")}
-                className="flex items-center"
-                disabled={files.length === 0}
-              >
-                <Folder size={20} className="mr-2" />
-                File Structure
-              </Button>
-              <Button
-                variant={activeTab === "codeAnalysis" ? "primary" : "outline"}
-                onClick={() => handleTabChange("codeAnalysis")}
-                className="flex items-center"
-                disabled={files.length === 0}
-              >
-                <BarChart3 size={20} className="mr-2" />
-                Code Analysis
-              </Button>
-              <Button
-                variant={activeTab === "designSystem" ? "primary" : "outline"}
-                onClick={() => handleTabChange("designSystem")}
-                className="flex items-center"
-                disabled={files.length === 0}
-              >
-                🎨
-                <span className="ml-2">Design System</span>
-              </Button>
-              <Button
-                variant={activeTab === "dependencies" ? "primary" : "outline"}
-                onClick={() => handleTabChange("dependencies")}
-                className="flex items-center"
-                disabled={files.length === 0}
-              >
-                <Network size={20} className="mr-2" />
-                Dependencies
-              </Button>
-              <Button
-                variant={activeTab === "codebaseMap" ? "primary" : "outline"}
-                onClick={() => handleTabChange("codebaseMap")}
-                className="flex items-center"
-                disabled={files.length === 0}
-              >
-                🗺️
-                <span className="ml-2">Codebase Map</span>
-              </Button>
-            </nav>
-          </div>
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          {/* Tab content */}
+          {activeTab === "linkCodebase" ? (
+            <div className="w-full">
+              <LinkCodebaseTab 
+                onFilesUploaded={onFilesUploaded}
+                onProjectCreated={handleProjectCreated}
+              />
+            </div>
+          ) : activeTab === "dependencies" ? (
+            <div className="w-full">
+              <DependencyVisualizer files={filteredFiles} />
+            </div>
+          ) : activeTab === "codebaseMap" ? (
+            <div className="w-full">
+              <ArchitectureMap files={filteredFiles} />
+            </div>
+          ) : activeTab === "fileStructure" ? (
+            <div className="w-full">
+              <FileStructureTab 
+                files={filteredFiles} 
+                totalImportedFiles={totalImportedFiles}
+              />
+            </div>
+          ) : activeTab === "codeAnalysis" ? (
+            <div className="w-full">
+              <CodeAnalysisTab files={filteredFiles} />
+            </div>
+          ) : activeTab === "designSystem" ? (
+            <div className="w-full">
+              <DesignSystemTab files={filteredFiles} />
+            </div>
+          ) : null}
         </div>
       </div>
-
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Tab content */}
-        {activeTab === "linkCodebase" ? (
-          <div className="w-full">
-            <LinkCodebaseTab 
-              onFilesUploaded={onFilesUploaded}
-              onProjectCreated={handleProjectCreated}
-            />
-          </div>
-        ) : activeTab === "dependencies" ? (
-          <div className="w-full">
-            <DependencyVisualizer files={filteredFiles} />
-          </div>
-        ) : activeTab === "codebaseMap" ? (
-          <div className="w-full">
-            <ArchitectureMap files={filteredFiles} />
-          </div>
-        ) : activeTab === "fileStructure" ? (
-          <div className="w-full">
-            <FileStructureTab 
-              files={filteredFiles} 
-              totalImportedFiles={totalImportedFiles}
-            />
-          </div>
-        ) : activeTab === "codeAnalysis" ? (
-          <div className="w-full">
-            <CodeAnalysisTab files={filteredFiles} />
-          </div>
-        ) : activeTab === "designSystem" ? (
-          <div className="w-full">
-            <DesignSystemTab files={filteredFiles} />
-          </div>
-        ) : null}
-      </div>
-    </div>
+    </ProtectedRoute>
   );
 }
 
