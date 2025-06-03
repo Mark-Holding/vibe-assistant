@@ -18,6 +18,7 @@ import { projectService } from "../../lib/database/projects";
 import { fileService } from "../../lib/database/files";
 import { UserMenu } from "../../components/auth/UserMenu";
 import { ProtectedRoute } from "../../components/auth/ProtectedRoute";
+import { isRelevantSourceFile } from "../../utils/fileUtils";
 
 export default function CodeAnalyzerPage() {
   const [activeTab, setActiveTab] = useState<
@@ -223,32 +224,6 @@ export default function CodeAnalyzerPage() {
     },
     []
   );
-
-  // Utility to filter relevant source files
-  const isRelevantSourceFile = (file: FileData) => {
-    if (!file || !file.path) {
-      console.warn('Invalid file object:', file);
-      return false;
-    }
-    const excludeDirs = [
-      '/node_modules/', '/.git/', '/dist/', '/build/', '/out/', '/.next/', '/.vercel/'
-    ];
-    const ext = file.path.split('.').pop()?.toLowerCase();
-    const allowedExts = [
-      'js', 'jsx', 'ts', 'tsx', 'json', 'css', 'scss', 'md'
-    ];
-    if (
-      file.path.startsWith('.') ||
-      file.name.startsWith('.') ||
-      excludeDirs.some(dir => file.path.includes(dir))
-    ) {
-      return false;
-    }
-    if (!ext || !allowedExts.includes(ext)) {
-      return false;
-    }
-    return true;
-  };
 
   const filteredFiles = files.filter(isRelevantSourceFile);
 

@@ -24,6 +24,10 @@ const ALL_CATEGORIES = [
   'Tests',
   'Documentation',
   'HTML',
+  'Middleware',
+  'Database/Model',
+  'State Management',
+  'Environment',
   'Other',
 ];
 

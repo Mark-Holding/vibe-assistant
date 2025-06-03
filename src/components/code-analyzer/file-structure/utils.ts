@@ -39,6 +39,14 @@ export const FileTypeUtils = {
         return { type: 'JavaScript/TypeScript', color: '#3178c6' }; // TS blue
       case 'stylesheet':
         return { type: 'Stylesheet', color: '#1572b6' }; // CSS blue
+      case 'middleware':
+        return { type: 'Middleware', color: '#8b5cf6' }; // Violet
+      case 'model':
+        return { type: 'Database/Model', color: '#0ea5e9' }; // Sky Blue
+      case 'state':
+        return { type: 'State Management', color: '#ec4899' }; // Pink
+      case 'environment':
+        return { type: 'Environment', color: '#84cc16' }; // Lime
       case 'other':
         return { type: 'Other', color: '#9ca3af' }; // Gray
       default:

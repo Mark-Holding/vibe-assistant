@@ -18,6 +18,61 @@ export const getFileType = (filename: string): string => {
   return typeMap[ext || ''] || 'Unknown';
 };
 
+// Centralized filtering logic for relevant source files
+export const isRelevantSourceFile = (file: FileData): boolean => {
+  if (!file || !file.path) {
+    console.warn('Invalid file object:', file);
+    return false;
+  }
+  
+  const excludeDirs = [
+    '/node_modules/', '/.git/', '/dist/', '/build/', '/out/', '/.next/', '/.vercel/'
+  ];
+  const ext = file.path.split('.').pop()?.toLowerCase();
+  const allowedExts = [
+    'js', 'jsx', 'ts', 'tsx', 'json', 'css', 'scss', 'md', 'mjs', 'cjs', 'env', 'local', 'gitignore', 'prisma', 'yml', 'yaml'
+  ];
+  
+  // Important configuration files that start with dots
+  const importantDotFiles = [
+    '.env', '.env.local', '.env.development', '.env.production', '.env.test',
+    '.eslintrc', '.eslintrc.json', '.eslintrc.js', '.eslintrc.cjs', '.eslintrc.yaml', '.eslintrc.yml',
+    '.gitignore', '.gitattributes',
+    '.prettierrc', '.prettierrc.json', '.prettierrc.js', '.prettierrc.yaml', '.prettierrc.yml',
+    '.babelrc', '.babelrc.json', '.babelrc.js',
+    '.editorconfig'
+  ];
+  
+  // Check if it's an excluded directory
+  if (excludeDirs.some(dir => file.path.includes(dir))) {
+    return false;
+  }
+  
+  // Allow important configuration files that start with dots
+  if (file.name.startsWith('.')) {
+    const isImportantDotFile = importantDotFiles.some(dotFile => 
+      file.name === dotFile || file.name.startsWith(dotFile + '.')
+    );
+    if (!isImportantDotFile) {
+      return false;
+    }
+  }
+  
+  // For files without extensions (like .gitignore), allow them if they're important dot files
+  if (!ext) {
+    const isImportantDotFile = importantDotFiles.some(dotFile => 
+      file.name === dotFile || file.name.startsWith(dotFile + '.')
+    );
+    return isImportantDotFile;
+  }
+  
+  if (!allowedExts.includes(ext)) {
+    return false;
+  }
+  
+  return true;
+};
+
 export const processUploadedFiles = (files: File[]): FileData[] => {
   const processedFiles = Array.from(files).map(file => {
     // Ensure path is always defined and properly formatted

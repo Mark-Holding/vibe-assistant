@@ -9,6 +9,7 @@ import { projectService } from '../../../lib/database/projects';
 import { fileService } from '../../../lib/database/files';
 import { isSupabaseConfigured } from '../../../lib/supabase';
 import { debugEnvironment } from '../../../lib/debug-env';
+import { isRelevantSourceFile } from '../../../utils/fileUtils';
 
 interface LinkCodebaseTabProps {
   onFilesUploaded?: (files: FileData[]) => void;
@@ -79,29 +80,8 @@ export const LinkCodebaseTab: React.FC<LinkCodebaseTabProps> = ({
       console.log('Project created:', project);
 
       if (selectedMethod === 'upload' && uploadedFiles.length > 0) {
-        // Filter relevant files (same logic as before)
-        const relevantFiles = uploadedFiles.filter(file => {
-          if (!file || !file.path) return false;
-          const excludeDirs = [
-            '/node_modules/', '/.git/', '/dist/', '/build/', '/out/', '/.next/', '/.vercel/'
-          ];
-          const ext = file.path.split('.').pop()?.toLowerCase();
-          const allowedExts = ['js', 'jsx', 'ts', 'tsx', 'json', 'css', 'scss', 'md'];
-          
-          if (
-            file.path.startsWith('.') ||
-            file.name.startsWith('.') ||
-            excludeDirs.some(dir => file.path.includes(dir))
-          ) {
-            return false;
-          }
-          
-          if (!ext || !allowedExts.includes(ext)) {
-            return false;
-          }
-          
-          return true;
-        });
+        // Filter relevant files using centralized function
+        const relevantFiles = uploadedFiles.filter(isRelevantSourceFile);
 
         console.log(`Processing ${relevantFiles.length} relevant files out of ${uploadedFiles.length} total files`);
 

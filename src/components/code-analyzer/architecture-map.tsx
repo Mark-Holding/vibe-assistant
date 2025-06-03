@@ -18,7 +18,7 @@ import { FileTypeUtils } from './file-structure/utils';
 interface ArchitectureNode {
   id: string;
   name: string;
-  type: 'service' | 'component' | 'page' | 'utility' | 'config' | 'group';
+  type: 'service' | 'component' | 'page' | 'utility' | 'config' | 'group' | 'middleware' | 'model' | 'state' | 'environment';
   children?: ArchitectureNode[];
   connections: string[];
   x: number;
@@ -49,7 +49,47 @@ interface ArchitectureMapProps {
 // File categorization rules
 const categorizeFile = (path: string): { category: string; importance: number } => {
   const filename = path.toLowerCase();
+  const actualFilename = path.split('/').pop()?.toLowerCase() || '';
   const pathParts = path.split('/');
+  
+  // MIDDLEWARE: Next.js middleware files, auth logic, interceptors
+  if (filename.includes('middleware') || 
+      path.includes('/middleware/') ||
+      filename.includes('auth.ts') || 
+      filename.includes('auth.js') ||
+      filename.includes('interceptor')) {
+    return { category: 'middleware', importance: 8 };
+  }
+  
+  // DATABASE/MODEL: ORM definitions, database schemas
+  if (path.match(/\/(models|db|prisma|database)\//) || 
+      filename.includes('model') || 
+      filename.includes('schema') || 
+      filename.includes('entity') ||
+      filename.includes('prisma') ||
+      filename.includes('.prisma')) {
+    return { category: 'model', importance: 7 };
+  }
+  
+  // STATE MANAGEMENT: Redux, Zustand, Jotai stores
+  if (filename.includes('store') || 
+      filename.includes('slice') || 
+      filename.includes('atom') ||
+      filename.includes('reducer') ||
+      path.includes('/store/') ||
+      path.includes('/stores/') ||
+      path.includes('/state/')) {
+    return { category: 'state', importance: 7 };
+  }
+  
+  // ENVIRONMENT: .env files and variants
+  if (actualFilename.startsWith('.env') || 
+      filename.includes('environment') ||
+      actualFilename === 'env.ts' ||
+      actualFilename === 'env.js') {
+    console.log('Categorized as environment file:', path, 'filename:', actualFilename);
+    return { category: 'environment', importance: 6 };
+  }
   
   // PAGE: in /pages/ or /app/ or filename includes page/route
   if (path.match(/\/(pages|app)\//) || filename.includes('page') || filename.includes('route')) {
@@ -62,7 +102,7 @@ const categorizeFile = (path: string): { category: string; importance: number } 
   }
   
   // COMPONENT: any .tsx/.jsx file not already categorized as page/service
-  if ((filename.endsWith('.tsx') || filename.endsWith('.jsx')) &&
+  if ((actualFilename.endsWith('.tsx') || actualFilename.endsWith('.jsx')) &&
       !filename.includes('test') &&
       !filename.includes('spec')) {
     return { category: 'component', importance: 8 };
@@ -74,17 +114,20 @@ const categorizeFile = (path: string): { category: string; importance: number } 
   }
   
   // TYPES
-  if (filename.includes('type') || filename.includes('interface') || filename.includes('.d.ts')) {
+  if (filename.includes('type') || filename.includes('interface') || actualFilename.includes('.d.ts')) {
     return { category: 'types', importance: 5 };
   }
   
   // STYLES
-  if (filename.includes('.css') || filename.includes('.scss') || filename.includes('style')) {
+  if (actualFilename.endsWith('.css') || actualFilename.endsWith('.scss') || filename.includes('style')) {
     return { category: 'styles', importance: 4 };
   }
   
   // CONFIG
-  if (filename.includes('config') || filename.includes('setting') || filename.includes('.json')) {
+  if (filename.includes('config') || filename.includes('setting') || actualFilename.endsWith('.json') ||
+      filename.includes('eslintrc') || filename.includes('postcss') || filename.includes('babel') ||
+      filename.includes('prettier') || actualFilename === '.gitignore' || actualFilename === '.gitattributes' ||
+      actualFilename === '.editorconfig') {
     return { category: 'config', importance: 2 };
   }
   
@@ -109,13 +152,44 @@ export const categorizeByAST = (content: string, path: string): { category: stri
   if (pathParts.includes('node_modules') || pathParts.includes('.git')) {
     return { category: 'dependencies', importance: 1 };
   }
+  
+  // Environment files
+  const filename = path.toLowerCase();
+  const actualFilename = path.split('/').pop()?.toLowerCase() || '';
+  if (actualFilename.startsWith('.env') || 
+      filename.includes('environment') ||
+      actualFilename === 'env.ts' ||
+      actualFilename === 'env.js') {
+    console.log('AST categorized as environment file:', path, 'filename:', actualFilename);
+    return { category: 'environment', importance: 6 };
+  }
+  
+  // Middleware files
+  if (filename.includes('middleware') || 
+      path.includes('/middleware/') ||
+      filename.includes('auth.ts') || 
+      filename.includes('auth.js') ||
+      filename.includes('interceptor')) {
+    return { category: 'middleware', importance: 8 };
+  }
+  
+  // Database/Model files
+  if (path.match(/\/(models|db|prisma|database)\//) || 
+      filename.includes('model') || 
+      filename.includes('schema') || 
+      filename.includes('entity') ||
+      filename.includes('prisma') ||
+      filename.includes('.prisma')) {
+    return { category: 'model', importance: 7 };
+  }
+  
   if (path.match(/\/(pages|app)\//) || path.toLowerCase().includes('page') || path.toLowerCase().includes('route')) {
     return { category: 'page', importance: 9 };
   }
   if (path.match(/\/(services)\//) || path.toLowerCase().includes('service') || path.toLowerCase().includes('api')) {
     return { category: 'service', importance: 8 };
   }
-  if (path.endsWith('.json')) {
+  if (actualFilename.endsWith('.json')) {
     try {
       const json = JSON.parse(content);
       if (json && typeof json === 'object' && (
@@ -125,7 +199,33 @@ export const categorizeByAST = (content: string, path: string): { category: stri
       }
     } catch {}
   }
-  // Try to parse JS/TS
+  
+  // Skip Babel parsing for non-JavaScript files
+  const shouldSkipBabelParsing = 
+    actualFilename.startsWith('.env') ||
+    actualFilename.endsWith('.env') ||
+    actualFilename.endsWith('.local') ||
+    actualFilename === '.gitignore' ||
+    actualFilename.endsWith('.md') ||
+    actualFilename.endsWith('.txt') ||
+    actualFilename.endsWith('.yml') ||
+    actualFilename.endsWith('.yaml') ||
+    actualFilename.endsWith('.css') ||
+    actualFilename.endsWith('.scss') ||
+    actualFilename.endsWith('.html') ||
+    actualFilename.endsWith('.prisma') ||
+    filename.includes('eslintrc') ||
+    filename.includes('prettier') ||
+    filename.includes('babel') ||
+    actualFilename === '.editorconfig' ||
+    actualFilename === '.gitattributes';
+  
+  if (shouldSkipBabelParsing) {
+    console.log('Skipping Babel parsing for non-JS file:', path);
+    return categorizeFile(path);
+  }
+  
+  // Try to parse JS/TS files only
   try {
     const ast = babelParser.parse(content, {
       sourceType: 'unambiguous',
@@ -137,6 +237,10 @@ export const categorizeByAST = (content: string, path: string): { category: stri
     let foundType = false;
     let foundTest = false;
     let foundStyle = false;
+    let foundStateManagement = false;
+    let foundMiddleware = false;
+    let foundModel = false;
+    
     traverse(ast, {
       JSXElement() { foundJSX = true; },
       FunctionDeclaration(path: NodePath<t.FunctionDeclaration>) {
@@ -149,6 +253,20 @@ export const categorizeByAST = (content: string, path: string): { category: stri
         if (typeof val === 'string') {
           if (val.includes('axios') || val.includes('fetch')) foundService = true;
           if (val.match(/\.css$|\.scss$|style/)) foundStyle = true;
+          // State management patterns
+          if (val.includes('redux') || val.includes('zustand') || val.includes('jotai') || 
+              val.includes('@reduxjs/toolkit') || val.includes('recoil')) {
+            foundStateManagement = true;
+          }
+          // Middleware patterns
+          if (val.includes('next/server') || val.includes('middleware')) {
+            foundMiddleware = true;
+          }
+          // Database/ORM patterns
+          if (val.includes('prisma') || val.includes('typeorm') || val.includes('sequelize') ||
+              val.includes('mongoose') || val.includes('drizzle')) {
+            foundModel = true;
+          }
         }
       },
       CallExpression(path: NodePath<t.CallExpression>) {
@@ -156,16 +274,42 @@ export const categorizeByAST = (content: string, path: string): { category: stri
           const name = path.node.callee.name;
           if (['describe', 'test', 'expect', 'it'].includes(name)) foundTest = true;
           if (name === 'fetch' || name === 'axios') foundService = true;
+          // State management function calls
+          if (['createStore', 'configureStore', 'createSlice', 'atom', 'useStore'].includes(name)) {
+            foundStateManagement = true;
+          }
+        }
+      },
+      // Detect middleware exports
+      ExportDefaultDeclaration(path: NodePath<t.ExportDefaultDeclaration>) {
+        if (path.node.declaration && path.node.declaration.type === 'FunctionDeclaration') {
+          const func = path.node.declaration as t.FunctionDeclaration;
+          if (func.params.length >= 1 && func.params[0].type === 'Identifier') {
+            // Check for middleware pattern (request/response parameters)
+            foundMiddleware = true;
+          }
         }
       },
       TSInterfaceDeclaration() { foundType = true; },
       TSTypeAliasDeclaration() { foundType = true; },
       VariableDeclarator(path: NodePath<t.VariableDeclarator>) {
-        if (path.node.id.type === 'Identifier' && path.node.id.name.startsWith('use')) {
-          foundUseFunction = true;
+        if (path.node.id.type === 'Identifier') {
+          const name = path.node.id.name;
+          if (name.startsWith('use')) {
+            foundUseFunction = true;
+          }
+          // State management variable patterns
+          if (name.includes('Store') || name.includes('slice') || name.includes('atom')) {
+            foundStateManagement = true;
+          }
         }
       },
     });
+    
+    // Check AST findings in order of priority
+    if (foundMiddleware) { console.log('AST categorized as middleware:', path); return { category: 'middleware', importance: 8 }; }
+    if (foundModel) { console.log('AST categorized as model:', path); return { category: 'model', importance: 7 }; }
+    if (foundStateManagement) { console.log('AST categorized as state:', path); return { category: 'state', importance: 7 }; }
     if (foundJSX) { console.log('AST categorized as component:', path); return { category: 'component', importance: 8 }; }
     if (foundUseFunction) { console.log('AST categorized as utility:', path); return { category: 'utility', importance: 7 }; }
     if (foundService) { console.log('AST categorized as service:', path); return { category: 'service', importance: 8 }; }
@@ -312,7 +456,7 @@ const buildArchitectureTree = async (files: Array<{ name: string; path: string; 
   categorizedFiles.forEach((categoryFiles, category) => {
     const sortedFiles = categoryFiles.sort((a, b) => b.importance - a.importance);
     const before = nodes.length;
-    if (category === 'page' || category === 'service') {
+    if (category === 'page' || category === 'service' || category === 'middleware') {
       // Show high-importance files individually
       sortedFiles.slice(0, 10).forEach(file => {
         nodes.push({
@@ -375,6 +519,39 @@ const buildArchitectureTree = async (files: Array<{ name: string; path: string; 
           level: 2,
           fileCount: sortedFiles.length - 8,
           files: sortedFiles.slice(8).map(f => f.path)
+        });
+      }
+    } else if (category === 'model' || category === 'state') {
+      // Show important model/state files individually
+      sortedFiles.slice(0, 6).forEach(file => {
+        nodes.push({
+          id: `node_${nodeId++}`,
+          name: file.name.replace(/\.(tsx|jsx|ts|js|prisma)$/, ''),
+          type: category as ArchitectureNode['type'],
+          connections: [],
+          x: 0,
+          y: 0,
+          width: 110,
+          height: 55,
+          level: 2,
+          files: [file.path]
+        });
+      });
+      
+      if (sortedFiles.length > 6) {
+        const displayName = category === 'model' ? 'Models' : 'State';
+        nodes.push({
+          id: `node_${nodeId++}`,
+          name: `${displayName} (${sortedFiles.length - 6})`,
+          type: 'group',
+          connections: [],
+          x: 0,
+          y: 0,
+          width: 110,
+          height: 55,
+          level: 2,
+          fileCount: sortedFiles.length - 6,
+          files: sortedFiles.slice(6).map(f => f.path)
         });
       }
     } else {

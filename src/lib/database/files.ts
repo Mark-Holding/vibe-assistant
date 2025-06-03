@@ -241,33 +241,60 @@ export const fileService = {
       return trimmed.startsWith('//') || trimmed.startsWith('/*') || trimmed.includes('*/')
     }).length
 
-    // Parse with Babel for detailed analysis
-    try {
-      const ast = babel.parse(content, {
-        sourceType: 'module',
-        plugins: ['typescript', 'jsx', 'decorators-legacy']
-      })
+    // Skip Babel parsing for non-JavaScript files
+    const filename = filePath.toLowerCase()
+    const actualFilename = filePath.split('/').pop()?.toLowerCase() || '';
+    const shouldSkipBabelParsing = 
+      actualFilename.startsWith('.env') ||
+      actualFilename.endsWith('.env') ||
+      actualFilename.endsWith('.local') ||
+      actualFilename === '.gitignore' ||
+      actualFilename.endsWith('.md') ||
+      actualFilename.endsWith('.txt') ||
+      actualFilename.endsWith('.yml') ||
+      actualFilename.endsWith('.yaml') ||
+      actualFilename.endsWith('.css') ||
+      actualFilename.endsWith('.scss') ||
+      actualFilename.endsWith('.html') ||
+      actualFilename.endsWith('.prisma') ||
+      filename.includes('eslintrc') ||
+      filename.includes('prettier') ||
+      filename.includes('babel') ||
+      actualFilename === '.editorconfig' ||
+      actualFilename === '.gitattributes' ||
+      actualFilename.endsWith('.json'); // JSON files shouldn't be parsed with Babel
 
-      traverse(ast, {
-        // Count functions
-        FunctionDeclaration() { functionCount++ },
-        ArrowFunctionExpression() { functionCount++ },
-        FunctionExpression() { functionCount++ },
-        ClassMethod() { functionCount++ },
-        ObjectMethod() { functionCount++ },
+    // Parse with Babel for detailed analysis (only for JS/TS files)
+    if (!shouldSkipBabelParsing) {
+      try {
+        const ast = babel.parse(content, {
+          sourceType: 'module',
+          plugins: ['typescript', 'jsx', 'decorators-legacy']
+        })
 
-        // Count React components
-        JSXElement() { componentCount++ },
+        traverse(ast, {
+          // Count functions
+          FunctionDeclaration() { functionCount++ },
+          ArrowFunctionExpression() { functionCount++ },
+          FunctionExpression() { functionCount++ },
+          ClassMethod() { functionCount++ },
+          ObjectMethod() { functionCount++ },
 
-        // Count imports
-        ImportDeclaration() { importCount++ },
+          // Count React components
+          JSXElement() { componentCount++ },
 
-        // Count exports
-        ExportDefaultDeclaration() { exportCount++ },
-        ExportNamedDeclaration() { exportCount++ }
-      })
-    } catch (error) {
-      console.warn(`Could not parse ${filePath} with Babel:`, error)
+          // Count imports
+          ImportDeclaration() { importCount++ },
+
+          // Count exports
+          ExportDefaultDeclaration() { exportCount++ },
+          ExportNamedDeclaration() { exportCount++ }
+        })
+      } catch (error) {
+        console.warn(`Could not parse ${filePath} with Babel:`, error)
+      }
+    } else {
+      console.log('Skipping Babel parsing for non-JS file:', filePath)
     }
 
     // Determine file characteristics

@@ -1,30 +1,7 @@
 import { useState, useCallback } from 'react';
 import { FileData, FileStats, FileTreeNode } from '../types/code-analyzer';
-import { processUploadedFiles, buildFileTree, calculateStats, readFileContent } from '../utils/fileUtils';
+import { processUploadedFiles, buildFileTree, calculateStats, readFileContent, isRelevantSourceFile } from '../utils/fileUtils';
 import { categorizeByAST } from '../components/code-analyzer/architecture-map';
-
-// Filtering logic copied from page.tsx
-const isRelevantSourceFile = (file: FileData) => {
-  if (!file || !file.path) return false;
-  const excludeDirs = [
-    '/node_modules/', '/.git/', '/dist/', '/build/', '/out/', '/.next/', '/.vercel/'
-  ];
-  const ext = file.path.split('.').pop()?.toLowerCase();
-  const allowedExts = [
-    'js', 'jsx', 'ts', 'tsx', 'json', 'css', 'scss', 'md'
-  ];
-  if (
-    file.path.startsWith('.') ||
-    file.name.startsWith('.') ||
-    excludeDirs.some(dir => file.path.includes(dir))
-  ) {
-    return false;
-  }
-  if (!ext || !allowedExts.includes(ext)) {
-    return false;
-  }
-  return true;
-};
 
 export const useFileAnalysis = () => {
   const [files, setFiles] = useState<FileData[]>([]);
