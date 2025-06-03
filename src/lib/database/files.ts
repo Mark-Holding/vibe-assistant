@@ -1,6 +1,7 @@
 import { supabase } from '../supabase'
 import { FileData } from '../../types/code-analyzer'
 import { categorizeByAST } from '../../components/code-analyzer/architecture-map'
+import { analyzeEnhancedMetrics, EnhancedMetrics } from '../../utils/enhancedMetricsAnalyzer'
 import * as babel from '@babel/parser'
 import traverse from '@babel/traverse'
 
@@ -128,6 +129,24 @@ export const fileService = {
           is_entry_point: analysis.isEntryPoint,
           is_test_file: analysis.isTestFile,
           is_config_file: analysis.isConfigFile,
+          // Enhanced metrics - Performance indicators
+          has_heavy_dependencies: analysis.enhancedMetrics.bundleImpact.hasHeavyDependencies,
+          uses_tree_shaking: analysis.enhancedMetrics.bundleImpact.usesTreeShaking,
+          has_barrel_exports: analysis.enhancedMetrics.bundleImpact.hasBarrelExports,
+          // Enhanced metrics - Code quality
+          cyclomatic_complexity: analysis.enhancedMetrics.complexity.cyclomaticComplexity,
+          cognitive_complexity: analysis.enhancedMetrics.complexity.cognitiveComplexity,
+          nesting_depth: analysis.enhancedMetrics.complexity.nestingDepth,
+          // Enhanced metrics - Next.js features
+          uses_server_components: analysis.enhancedMetrics.nextjsFeatures.usesServerComponents,
+          uses_client_components: analysis.enhancedMetrics.nextjsFeatures.usesClientComponents,
+          uses_server_actions: analysis.enhancedMetrics.nextjsFeatures.usesServerActions,
+          uses_image_optimization: analysis.enhancedMetrics.nextjsFeatures.usesImageOptimization,
+          uses_dynamic_imports: analysis.enhancedMetrics.nextjsFeatures.usesDynamicImports,
+          // Enhanced metrics - Dependencies (stored as JSONB)
+          internal_dependencies: JSON.stringify(analysis.enhancedMetrics.dependencies.internal),
+          external_dependencies: JSON.stringify(analysis.enhancedMetrics.dependencies.external),
+          circular_dependencies: JSON.stringify(analysis.enhancedMetrics.dependencies.circular),
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         }
@@ -219,8 +238,13 @@ export const fileService = {
     isEntryPoint: boolean
     isTestFile: boolean
     isConfigFile: boolean
+    // Enhanced metrics
+    enhancedMetrics: EnhancedMetrics
   }> {
     const { category, importance } = categorizeByAST(content, filePath)
+    
+    // Run enhanced metrics analysis
+    const enhancedMetrics = analyzeEnhancedMetrics(content, filePath)
     
     let functionCount = 0
     let componentCount = 0
@@ -314,7 +338,8 @@ export const fileService = {
       commentCount,
       isEntryPoint,
       isTestFile,
-      isConfigFile
+      isConfigFile,
+      enhancedMetrics
     }
   },
 

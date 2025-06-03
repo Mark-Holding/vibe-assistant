@@ -49,6 +49,54 @@ interface DependencyVisualizerProps {
   }>;
 }
 
+// File type descriptions for tooltips and documentation
+export const FILE_TYPE_DESCRIPTIONS: Record<string, string> = {
+  'Page': 'A page file represents a route or screen in your application. These are typically top-level components that users navigate to, containing the main content and layout for specific URLs.',
+  
+  'Service': 'A service file contains business logic, API calls, and data management functions. These files handle external communications, data processing, and core application functionality.',
+  
+  'Component': 'A component file defines reusable UI elements and interactive pieces of your interface. These are the building blocks of your user interface that can be composed together.',
+  
+  'Utility': 'A utility file contains helper functions, hooks, and reusable logic that supports other parts of your application. These files provide common functionality used across multiple components.',
+  
+  'Types': 'A types file defines TypeScript interfaces, type definitions, and data structures. These files ensure type safety and provide clear contracts for your application\'s data.',
+  
+  'Styles': 'A styles file contains CSS, SCSS, or styling-related code that defines the visual appearance of your application. This includes stylesheets, styled-components, and design system files.',
+  
+  'Config': 'A config file contains configuration settings, environment setup, and build tool configurations. These files control how your application behaves in different environments.',
+  
+  'Dependencies': 'Dependencies are external libraries and packages that your project relies on. These files are typically managed by package managers and provide third-party functionality.',
+  
+  'Tests': 'A test file contains unit tests, integration tests, and test utilities that verify your application works correctly. These files ensure code quality and catch bugs early.',
+  
+  'Documentation': 'A documentation file contains project information, setup instructions, and explanations. These files help developers understand and contribute to your project.',
+  
+  'HTML': 'An HTML file contains markup structure and static content. These files define the basic structure of web pages and provide semantic meaning to your content.',
+  
+  'Middleware': 'A middleware file contains interceptor logic that runs between requests and responses. These files handle authentication, logging, routing, and request/response modification.',
+  
+  'Database/Model': 'A database or model file defines data structures, database schemas, and ORM configurations. These files manage how your application stores and retrieves data.',
+  
+  'State Management': 'A state management file contains global application state, reducers, and state logic. These files manage data flow and state updates across your application.',
+  
+  'Environment': 'An environment file contains environment variables and configuration that changes between development, staging, and production. These files store sensitive data and environment-specific settings.',
+  
+  'Other': 'Other files include miscellaneous assets, build outputs, and files that don\'t fit into specific categories. These might include images, fonts, or generated files.'
+};
+
+// Helper function to get description by file type
+export const getFileTypeDescription = (fileType: string): string => {
+  return FILE_TYPE_DESCRIPTIONS[fileType] || FILE_TYPE_DESCRIPTIONS['Other'];
+};
+
+// Helper function to get all file types with descriptions
+export const getAllFileTypeDescriptions = (): Array<{ type: string; description: string }> => {
+  return Object.entries(FILE_TYPE_DESCRIPTIONS).map(([type, description]) => ({
+    type,
+    description
+  }));
+};
+
 // File type detection and categorization
 const categorizeFile = (path: string, content: string): FileNode['type'] => {
   const filename = path.toLowerCase();

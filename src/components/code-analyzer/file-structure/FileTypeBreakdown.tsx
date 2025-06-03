@@ -1,6 +1,7 @@
 import React from 'react';
 import { FileTypeData } from '../../../types/code-analyzer';
 import { FileTypeUtils } from './utils';
+import { FileTypeTooltip } from '../../ui/FileTypeTooltip';
 
 interface FileTypeBreakdownProps {
   breakdown: Record<string, FileTypeData>;
@@ -81,7 +82,11 @@ export const FileTypeBreakdown: React.FC<FileTypeBreakdownProps> = ({
                   className="w-3 h-3 rounded-full mr-2"
                   style={{ backgroundColor: data.color }}
                 />
-                <div className="text-sm text-gray-600">{label}</div>
+                <FileTypeTooltip fileType={label} position="left">
+                  <div className="text-sm text-gray-600 cursor-help hover:text-gray-800 transition-colors">
+                    {label}
+                  </div>
+                </FileTypeTooltip>
               </div>
               <div className="h-2 bg-gray-100 rounded-full mt-1">
                 <div

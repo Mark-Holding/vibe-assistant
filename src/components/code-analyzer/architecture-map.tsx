@@ -13,6 +13,8 @@ import type { NodePath } from '@babel/traverse';
 import * as t from '@babel/types';
 import type { FileData } from '../../types/code-analyzer';
 import { FileTypeUtils } from './file-structure/utils';
+import { analyzeEnhancedMetrics } from '../../utils/enhancedMetricsAnalyzer';
+import { EnhancedMetricTooltip } from '../ui/EnhancedMetricTooltip';
 
 // Types
 interface ArchitectureNode {
@@ -52,6 +54,68 @@ const categorizeFile = (path: string): { category: string; importance: number } 
   const actualFilename = path.split('/').pop()?.toLowerCase() || '';
   const pathParts = path.split('/');
   
+  // NEXT.JS SPECIFIC PATTERNS
+  // Next.js App Router special files (highest priority)
+  const nextjsAppRouterFiles = [
+    'page.tsx', 'page.jsx', 'page.js', 'page.ts',
+    'layout.tsx', 'layout.jsx', 'layout.js', 'layout.ts',
+    'error.tsx', 'error.jsx', 'error.js', 'error.ts',
+    'loading.tsx', 'loading.jsx', 'loading.js', 'loading.ts',
+    'not-found.tsx', 'not-found.jsx', 'not-found.js', 'not-found.ts',
+    'global-error.tsx', 'global-error.jsx', 'global-error.js', 'global-error.ts',
+    'template.tsx', 'template.jsx', 'template.js', 'template.ts'
+  ];
+  
+  if (nextjsAppRouterFiles.includes(actualFilename)) {
+    // Check if it's in app directory structure
+    if (path.includes('/app/') || path.includes('/src/app/')) {
+      return { category: 'page', importance: 9 };
+    }
+  }
+  
+  // Next.js API Routes (App Router: route.ts/js in /app/ directory)
+  if ((actualFilename === 'route.ts' || actualFilename === 'route.js') && 
+      (path.includes('/app/') || path.includes('/src/app/'))) {
+    return { category: 'service', importance: 8 };
+  }
+  
+  // Next.js Pages Router API routes
+  if (path.includes('/pages/api/') || path.includes('/src/pages/api/')) {
+    return { category: 'service', importance: 8 };
+  }
+  
+  // Next.js middleware (root level)
+  if ((actualFilename === 'middleware.ts' || actualFilename === 'middleware.js') && 
+      (path === `middleware.ts` || path === `middleware.js` || 
+       path === `src/middleware.ts` || path === `src/middleware.js` || 
+       path.endsWith('/middleware.ts') || path.endsWith('/middleware.js'))) {
+    return { category: 'middleware', importance: 8 };
+  }
+  
+  // Next.js special files
+  const nextjsSpecialFiles = [
+    '_app.tsx', '_app.jsx', '_app.js',  // App component
+    '_document.tsx', '_document.jsx', '_document.js',  // Document component
+    '404.tsx', '404.jsx', '404.js',  // 404 page
+    '500.tsx', '500.jsx', '500.js',  // 500 page
+    '_error.tsx', '_error.jsx', '_error.js'  // Error page
+  ];
+  
+  if (nextjsSpecialFiles.includes(actualFilename)) {
+    return { category: 'page', importance: 9 };
+  }
+  
+  // Next.js config files
+  const nextjsConfigFiles = [
+    'next.config.js', 'next.config.mjs', 'next.config.ts',
+    'next-env.d.ts'
+  ];
+  
+  if (nextjsConfigFiles.includes(actualFilename)) {
+    return { category: 'config', importance: 3 };
+  }
+  
+  // GENERAL PATTERNS (existing logic with enhancements)
   // MIDDLEWARE: Next.js middleware files, auth logic, interceptors
   if (filename.includes('middleware') || 
       path.includes('/middleware/') ||
@@ -153,9 +217,57 @@ export const categorizeByAST = (content: string, path: string): { category: stri
     return { category: 'dependencies', importance: 1 };
   }
   
-  // Environment files
+  // NEXT.JS SPECIFIC PATTERNS (same as categorizeFile)
   const filename = path.toLowerCase();
   const actualFilename = path.split('/').pop()?.toLowerCase() || '';
+  
+  // Next.js App Router special files (highest priority)
+  const nextjsAppRouterFiles = [
+    'page.tsx', 'page.jsx', 'page.js', 'page.ts',
+    'layout.tsx', 'layout.jsx', 'layout.js', 'layout.ts',
+    'error.tsx', 'error.jsx', 'error.js', 'error.ts',
+    'loading.tsx', 'loading.jsx', 'loading.js', 'loading.ts',
+    'not-found.tsx', 'not-found.jsx', 'not-found.js', 'not-found.ts',
+    'global-error.tsx', 'global-error.jsx', 'global-error.js', 'global-error.ts',
+    'template.tsx', 'template.jsx', 'template.js', 'template.ts'
+  ];
+  
+  if (nextjsAppRouterFiles.includes(actualFilename)) {
+    // Check if it's in app directory structure
+    if (path.includes('/app/') || path.includes('/src/app/')) {
+      console.log('AST categorized as Next.js App Router page:', path);
+      return { category: 'page', importance: 9 };
+    }
+  }
+  
+  // Next.js API Routes (App Router: route.ts/js in /app/ directory)
+  if ((actualFilename === 'route.ts' || actualFilename === 'route.js') && 
+      (path.includes('/app/') || path.includes('/src/app/'))) {
+    console.log('AST categorized as Next.js App Router API route:', path);
+    return { category: 'service', importance: 8 };
+  }
+  
+  // Next.js Pages Router API routes
+  if (path.includes('/pages/api/') || path.includes('/src/pages/api/')) {
+    console.log('AST categorized as Next.js Pages Router API route:', path);
+    return { category: 'service', importance: 8 };
+  }
+  
+  // Next.js special files
+  const nextjsSpecialFiles = [
+    '_app.tsx', '_app.jsx', '_app.js',  // App component
+    '_document.tsx', '_document.jsx', '_document.js',  // Document component
+    '404.tsx', '404.jsx', '404.js',  // 404 page
+    '500.tsx', '500.jsx', '500.js',  // 500 page
+    '_error.tsx', '_error.jsx', '_error.js'  // Error page
+  ];
+  
+  if (nextjsSpecialFiles.includes(actualFilename)) {
+    console.log('AST categorized as Next.js special page:', path);
+    return { category: 'page', importance: 9 };
+  }
+  
+  // Environment files
   if (actualFilename.startsWith('.env') || 
       filename.includes('environment') ||
       actualFilename === 'env.ts' ||
@@ -240,28 +352,81 @@ export const categorizeByAST = (content: string, path: string): { category: stri
     let foundStateManagement = false;
     let foundMiddleware = false;
     let foundModel = false;
+    let foundComponent = false;
+    let foundNextjsAPI = false;
+    
+    // Enhanced pattern collections
+    const serviceImports = ['axios', 'fetch', 'swr', 'react-query', '@tanstack/react-query', 'graphql', 'apollo', '@apollo/client', 'urql', 'relay'];
+    const componentImports = ['@mui/material', '@chakra-ui', 'antd', '@headlessui/react', 'shadcn', '@radix-ui', 'framer-motion', 'styled-components', '@emotion'];
+    const reactHooks = ['useState', 'useEffect', 'useReducer', 'useContext', 'useMemo', 'useCallback', 'useRef', 'useImperativeHandle', 'useLayoutEffect', 'useDebugValue'];
+    const nextjsImports = ['next/image', 'next/link', 'next/navigation', 'next/headers', 'next/cookies', 'next/cache', 'next/dynamic', 'next/router'];
+    const serviceFunctions = ['fetchData', 'apiCall', 'request', 'query', 'mutation', 'getData', 'postData', 'putData', 'deleteData', 'patchData'];
+    const nextjsAPIExports = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'];
     
     traverse(ast, {
-      JSXElement() { foundJSX = true; },
+      JSXElement() { 
+        foundJSX = true; 
+        foundComponent = true;
+      },
+      
       FunctionDeclaration(path: NodePath<t.FunctionDeclaration>) {
-        if (path.node.id && path.node.id.name && path.node.id.name.startsWith('use')) {
-          foundUseFunction = true;
+        if (path.node.id && path.node.id.name) {
+          const name = path.node.id.name;
+          // Custom hooks
+          if (name.startsWith('use')) {
+            foundUseFunction = true;
+          }
+          // Service functions
+          if (serviceFunctions.some(fn => name.toLowerCase().includes(fn.toLowerCase()))) {
+            foundService = true;
+          }
         }
       },
+      
       ImportDeclaration(path: NodePath<t.ImportDeclaration>) {
         const val = path.node.source.value;
         if (typeof val === 'string') {
+          // Enhanced service detection
+          if (serviceImports.some(lib => val.includes(lib))) {
+            foundService = true;
+          }
+          
+          // Enhanced component detection
+          if (componentImports.some(lib => val.includes(lib))) {
+            foundComponent = true;
+          }
+          
+          // React hooks detection
+          if (val === 'react' && path.node.specifiers) {
+            const importedNames = path.node.specifiers
+              .filter(spec => spec.type === 'ImportSpecifier')
+              .map(spec => (spec as any).imported.name);
+            
+            if (reactHooks.some(hook => importedNames.includes(hook))) {
+              foundComponent = true;
+            }
+          }
+          
+          // Next.js specific imports
+          if (nextjsImports.some(nextImport => val.includes(nextImport))) {
+            foundComponent = true;
+          }
+          
+          // Legacy patterns
           if (val.includes('axios') || val.includes('fetch')) foundService = true;
           if (val.match(/\.css$|\.scss$|style/)) foundStyle = true;
+          
           // State management patterns
           if (val.includes('redux') || val.includes('zustand') || val.includes('jotai') || 
               val.includes('@reduxjs/toolkit') || val.includes('recoil')) {
             foundStateManagement = true;
           }
+          
           // Middleware patterns
           if (val.includes('next/server') || val.includes('middleware')) {
             foundMiddleware = true;
           }
+          
           // Database/ORM patterns
           if (val.includes('prisma') || val.includes('typeorm') || val.includes('sequelize') ||
               val.includes('mongoose') || val.includes('drizzle')) {
@@ -269,17 +434,48 @@ export const categorizeByAST = (content: string, path: string): { category: stri
           }
         }
       },
+      
       CallExpression(path: NodePath<t.CallExpression>) {
         if (path.node.callee.type === 'Identifier') {
           const name = path.node.callee.name;
+          // Test patterns
           if (['describe', 'test', 'expect', 'it'].includes(name)) foundTest = true;
+          
+          // Service patterns
           if (name === 'fetch' || name === 'axios') foundService = true;
+          if (serviceFunctions.includes(name)) foundService = true;
+          
+          // React hooks
+          if (reactHooks.includes(name)) foundComponent = true;
+          
           // State management function calls
           if (['createStore', 'configureStore', 'createSlice', 'atom', 'useStore'].includes(name)) {
             foundStateManagement = true;
           }
         }
       },
+      
+      // Detect Next.js API route exports
+      ExportNamedDeclaration(path: NodePath<t.ExportNamedDeclaration>) {
+        if (path.node.declaration && path.node.declaration.type === 'FunctionDeclaration') {
+          const func = path.node.declaration as t.FunctionDeclaration;
+          if (func.id && nextjsAPIExports.includes(func.id.name)) {
+            foundNextjsAPI = true;
+            foundService = true;
+          }
+        }
+        // Also check for variable declarations with HTTP method names
+        if (path.node.declaration && path.node.declaration.type === 'VariableDeclaration') {
+          const varDecl = path.node.declaration as t.VariableDeclaration;
+          varDecl.declarations.forEach(decl => {
+            if (decl.id.type === 'Identifier' && nextjsAPIExports.includes(decl.id.name)) {
+              foundNextjsAPI = true;
+              foundService = true;
+            }
+          });
+        }
+      },
+      
       // Detect middleware exports
       ExportDefaultDeclaration(path: NodePath<t.ExportDefaultDeclaration>) {
         if (path.node.declaration && path.node.declaration.type === 'FunctionDeclaration') {
@@ -290,8 +486,17 @@ export const categorizeByAST = (content: string, path: string): { category: stri
           }
         }
       },
+      
+      // Detect 'use client' and 'use server' directives
+      StringLiteral(path: NodePath<t.StringLiteral>) {
+        if (path.node.value === 'use client' || path.node.value === 'use server') {
+          foundComponent = true;
+        }
+      },
+      
       TSInterfaceDeclaration() { foundType = true; },
       TSTypeAliasDeclaration() { foundType = true; },
+      
       VariableDeclarator(path: NodePath<t.VariableDeclarator>) {
         if (path.node.id.type === 'Identifier') {
           const name = path.node.id.name;
@@ -302,17 +507,22 @@ export const categorizeByAST = (content: string, path: string): { category: stri
           if (name.includes('Store') || name.includes('slice') || name.includes('atom')) {
             foundStateManagement = true;
           }
+          // Service variable patterns
+          if (serviceFunctions.some(fn => name.toLowerCase().includes(fn.toLowerCase()))) {
+            foundService = true;
+          }
         }
       },
     });
     
-    // Check AST findings in order of priority
+    // Enhanced priority checking with new patterns
+    if (foundNextjsAPI) { console.log('AST categorized as Next.js API route:', path); return { category: 'service', importance: 8 }; }
     if (foundMiddleware) { console.log('AST categorized as middleware:', path); return { category: 'middleware', importance: 8 }; }
     if (foundModel) { console.log('AST categorized as model:', path); return { category: 'model', importance: 7 }; }
     if (foundStateManagement) { console.log('AST categorized as state:', path); return { category: 'state', importance: 7 }; }
-    if (foundJSX) { console.log('AST categorized as component:', path); return { category: 'component', importance: 8 }; }
-    if (foundUseFunction) { console.log('AST categorized as utility:', path); return { category: 'utility', importance: 7 }; }
     if (foundService) { console.log('AST categorized as service:', path); return { category: 'service', importance: 8 }; }
+    if (foundComponent || foundJSX) { console.log('AST categorized as component:', path); return { category: 'component', importance: 8 }; }
+    if (foundUseFunction) { console.log('AST categorized as utility:', path); return { category: 'utility', importance: 7 }; }
     if (foundType) { console.log('AST categorized as types:', path); return { category: 'types', importance: 5 }; }
     if (foundTest) { console.log('AST categorized as tests:', path); return { category: 'tests', importance: 3 }; }
     if (foundStyle) { console.log('AST categorized as styles:', path); return { category: 'styles', importance: 4 }; }
@@ -1073,6 +1283,16 @@ const ArchitectureMap: React.FC<ArchitectureMapProps> = ({ files }) => {
                   <span className="ml-2">{selectedNode.connections.length}</span>
                 </div>
                 
+                {/* Enhanced Metrics Section */}
+                {selectedNode.files && selectedNode.files.length === 1 && (
+                  <div className="border-t pt-3 mt-3">
+                    <h5 className="font-medium text-gray-700 mb-2">
+                      📊 Enhanced Metrics
+                    </h5>
+                    <EnhancedMetricsDisplay filePath={selectedNode.files[0]} files={files} />
+                  </div>
+                )}
+                
                 {selectedNode.files && selectedNode.files.length > 0 && (
                   <div>
                     <h5 className="font-medium text-gray-700 mb-2">
@@ -1121,6 +1341,246 @@ const ArchitectureMap: React.FC<ArchitectureMapProps> = ({ files }) => {
                   <span>{connections.length}</span>
                 </div>
               </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Enhanced Metrics Display Component
+const EnhancedMetricsDisplay: React.FC<{ filePath: string; files: Array<{ name: string; path: string; type: string; size: number; file: File }> }> = ({ filePath, files }) => {
+  const [metrics, setMetrics] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  
+  useEffect(() => {
+    const analyzeFile = async () => {
+      setLoading(true);
+      try {
+        // Find the file in the files array
+        const targetFile = files.find((f: { path: string; file: File }) => f.path === filePath);
+        if (targetFile && targetFile.file) {
+          const content = await targetFile.file.text();
+          console.log('🔍 Analyzing enhanced metrics for:', filePath);
+          const enhancedMetrics = analyzeEnhancedMetrics(content, filePath);
+          console.log('📊 Enhanced metrics result:', enhancedMetrics);
+          setMetrics(enhancedMetrics);
+        }
+      } catch (error) {
+        console.error('Error analyzing enhanced metrics:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    analyzeFile();
+  }, [filePath, files]);
+  
+  if (loading) {
+    return <div className="text-xs text-gray-500">Analyzing...</div>;
+  }
+  
+  if (!metrics) {
+    return <div className="text-xs text-gray-500">No metrics available</div>;
+  }
+  
+  return (
+    <div className="space-y-2 text-xs">
+      {/* Complexity Metrics */}
+      <div>
+        <div className="font-medium text-gray-600 mb-1">🧠 Complexity</div>
+        <div className="ml-2 space-y-1">
+          <div className="flex justify-between">
+            <EnhancedMetricTooltip 
+              metricKey="cyclomaticComplexity" 
+              value={metrics.complexity.cyclomaticComplexity}
+            >
+              <span className="cursor-help underline decoration-dotted">Cyclomatic:</span>
+            </EnhancedMetricTooltip>
+            <span className={`font-mono ${
+              metrics.complexity.cyclomaticComplexity > 10 ? 'text-red-600' :
+              metrics.complexity.cyclomaticComplexity > 5 ? 'text-yellow-600' : 'text-green-600'
+            }`}>
+              {metrics.complexity.cyclomaticComplexity}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <EnhancedMetricTooltip 
+              metricKey="cognitiveComplexity" 
+              value={metrics.complexity.cognitiveComplexity}
+            >
+              <span className="cursor-help underline decoration-dotted">Cognitive:</span>
+            </EnhancedMetricTooltip>
+            <span className={`font-mono ${
+              metrics.complexity.cognitiveComplexity > 15 ? 'text-red-600' :
+              metrics.complexity.cognitiveComplexity > 8 ? 'text-yellow-600' : 'text-green-600'
+            }`}>
+              {metrics.complexity.cognitiveComplexity}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <EnhancedMetricTooltip 
+              metricKey="nestingDepth" 
+              value={metrics.complexity.nestingDepth}
+            >
+              <span className="cursor-help underline decoration-dotted">Nesting:</span>
+            </EnhancedMetricTooltip>
+            <span className={`font-mono ${
+              metrics.complexity.nestingDepth > 4 ? 'text-red-600' :
+              metrics.complexity.nestingDepth > 2 ? 'text-yellow-600' : 'text-green-600'
+            }`}>
+              {metrics.complexity.nestingDepth}
+            </span>
+          </div>
+        </div>
+      </div>
+      
+      {/* Performance Indicators */}
+      <div>
+        <div className="font-medium text-gray-600 mb-1">⚡ Performance</div>
+        <div className="ml-2 space-y-1">
+          <div className="flex items-center justify-between">
+            <EnhancedMetricTooltip 
+              metricKey="hasHeavyDependencies" 
+              value={metrics.bundleImpact.hasHeavyDependencies}
+            >
+              <span className="cursor-help underline decoration-dotted">Heavy Deps:</span>
+            </EnhancedMetricTooltip>
+            <span className={`text-xs px-1 rounded ${
+              metrics.bundleImpact.hasHeavyDependencies ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+            }`}>
+              {metrics.bundleImpact.hasHeavyDependencies ? 'Yes' : 'No'}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <EnhancedMetricTooltip 
+              metricKey="usesTreeShaking" 
+              value={metrics.bundleImpact.usesTreeShaking}
+            >
+              <span className="cursor-help underline decoration-dotted">Tree Shaking:</span>
+            </EnhancedMetricTooltip>
+            <span className={`text-xs px-1 rounded ${
+              metrics.bundleImpact.usesTreeShaking ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+            }`}>
+              {metrics.bundleImpact.usesTreeShaking ? 'Yes' : 'No'}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <EnhancedMetricTooltip 
+              metricKey="hasBarrelExports" 
+              value={metrics.bundleImpact.hasBarrelExports}
+            >
+              <span className="cursor-help underline decoration-dotted">Barrel Exports:</span>
+            </EnhancedMetricTooltip>
+            <span className={`text-xs px-1 rounded ${
+              metrics.bundleImpact.hasBarrelExports ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
+            }`}>
+              {metrics.bundleImpact.hasBarrelExports ? 'Yes' : 'No'}
+            </span>
+          </div>
+        </div>
+      </div>
+      
+      {/* Next.js Features */}
+      <div>
+        <div className="font-medium text-gray-600 mb-1">⚛️ Next.js</div>
+        <div className="ml-2 space-y-1">
+          {metrics.nextjsFeatures.usesServerComponents && (
+            <EnhancedMetricTooltip 
+              metricKey="usesServerComponents" 
+              value={metrics.nextjsFeatures.usesServerComponents}
+            >
+              <div className="text-xs bg-blue-100 text-blue-700 px-1 rounded cursor-help">
+                Server Components
+              </div>
+            </EnhancedMetricTooltip>
+          )}
+          {metrics.nextjsFeatures.usesClientComponents && (
+            <EnhancedMetricTooltip 
+              metricKey="usesClientComponents" 
+              value={metrics.nextjsFeatures.usesClientComponents}
+            >
+              <div className="text-xs bg-purple-100 text-purple-700 px-1 rounded cursor-help">
+                Client Components
+              </div>
+            </EnhancedMetricTooltip>
+          )}
+          {metrics.nextjsFeatures.usesServerActions && (
+            <EnhancedMetricTooltip 
+              metricKey="usesServerActions" 
+              value={metrics.nextjsFeatures.usesServerActions}
+            >
+              <div className="text-xs bg-indigo-100 text-indigo-700 px-1 rounded cursor-help">
+                Server Actions
+              </div>
+            </EnhancedMetricTooltip>
+          )}
+          {metrics.nextjsFeatures.usesImageOptimization && (
+            <EnhancedMetricTooltip 
+              metricKey="usesImageOptimization" 
+              value={metrics.nextjsFeatures.usesImageOptimization}
+            >
+              <div className="text-xs bg-emerald-100 text-emerald-700 px-1 rounded cursor-help">
+                Image Optimization
+              </div>
+            </EnhancedMetricTooltip>
+          )}
+          {metrics.nextjsFeatures.usesDynamicImports && (
+            <EnhancedMetricTooltip 
+              metricKey="usesDynamicImports" 
+              value={metrics.nextjsFeatures.usesDynamicImports}
+            >
+              <div className="text-xs bg-orange-100 text-orange-700 px-1 rounded cursor-help">
+                Dynamic Imports
+              </div>
+            </EnhancedMetricTooltip>
+          )}
+          {!Object.values(metrics.nextjsFeatures).some(feature => feature) && (
+            <div className="text-gray-500 text-xs">
+              No Next.js features detected
+              <EnhancedMetricTooltip 
+                metricKey="usesServerComponents" 
+                value={false}
+              >
+                <span className="ml-1 cursor-help text-gray-400">ℹ️</span>
+              </EnhancedMetricTooltip>
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {/* Dependencies Summary */}
+      <div>
+        <div className="font-medium text-gray-600 mb-1">📦 Dependencies</div>
+        <div className="ml-2 space-y-1">
+          <div className="flex justify-between">
+            <EnhancedMetricTooltip 
+              metricKey="internalDependencies" 
+              value={metrics.dependencies.internal.length}
+            >
+              <span className="cursor-help underline decoration-dotted">Internal:</span>
+            </EnhancedMetricTooltip>
+            <span className="font-mono">{metrics.dependencies.internal.length}</span>
+          </div>
+          <div className="flex justify-between">
+            <EnhancedMetricTooltip 
+              metricKey="externalDependencies" 
+              value={metrics.dependencies.external.length}
+            >
+              <span className="cursor-help underline decoration-dotted">External:</span>
+            </EnhancedMetricTooltip>
+            <span className="font-mono">{metrics.dependencies.external.length}</span>
+          </div>
+          {metrics.dependencies.circular.length > 0 && (
+            <div className="flex justify-between">
+              <EnhancedMetricTooltip 
+                metricKey="circularDependencies" 
+                value={metrics.dependencies.circular.length}
+              >
+                <span className="cursor-help underline decoration-dotted">Circular:</span>
+              </EnhancedMetricTooltip>
+              <span className="font-mono text-red-600">{metrics.dependencies.circular.length}</span>
             </div>
           )}
         </div>
