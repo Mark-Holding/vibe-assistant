@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Map as MapIcon } from 'lucide-react';
 import { Package } from 'lucide-react';

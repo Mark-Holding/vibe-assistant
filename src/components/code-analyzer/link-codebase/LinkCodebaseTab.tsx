@@ -104,6 +104,34 @@ export const LinkCodebaseTab: React.FC<LinkCodebaseTabProps> = ({
         await projectService.updateProjectStats(project.id, stats);
         console.log('📈 Project statistics updated:', stats);
 
+        // Start comprehensive Claude analysis in background
+        console.log('🚀 Starting comprehensive Claude analysis in background...');
+        try {
+          const analysisResponse = await fetch('/api/start-analysis', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              projectId: project.id
+            }),
+          });
+
+          const responseData = await analysisResponse.json();
+          console.log('📡 Analysis API response:', responseData);
+
+          if (analysisResponse.ok) {
+            console.log('✅ Claude analysis started successfully');
+            alert('Claude analysis started in background. Check console for progress.');
+          } else {
+            console.warn('⚠️ Failed to start Claude analysis:', responseData);
+            alert(`Failed to start analysis: ${responseData.error}`);
+          }
+        } catch (error) {
+          console.error('⚠️ Error starting Claude analysis:', error);
+          alert(`Error starting analysis: ${error}`);
+        }
+
         // Don't call onFilesUploaded here - let the parent component handle loading from database
         // onFilesUploaded(relevantFiles); // REMOVED - this was causing duplicate analysis
       }

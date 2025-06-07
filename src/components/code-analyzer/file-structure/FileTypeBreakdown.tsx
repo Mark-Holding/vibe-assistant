@@ -219,7 +219,22 @@ const LanguageBreakdown: React.FC<{ files: Array<{ name: string; size: number; c
     .sort((a, b) => b.bytes - a.bytes)
     .slice(0, 10); // Limit to top 10 languages
 
-  if (sortedLanguages.length === 0) return null;
+  // Calculate "Other" percentage for remaining languages
+  const shownPercentage = sortedLanguages.reduce((sum, lang) => sum + lang.percentage, 0);
+  const otherPercentage = 100 - shownPercentage;
+  
+  // Add "Other" if there's remaining percentage
+  const finalLanguages = [...sortedLanguages];
+  if (otherPercentage > 0.1) { // Only show if > 0.1%
+    finalLanguages.push({
+      language: 'Other',
+      count: 0,
+      bytes: 0,
+      percentage: otherPercentage
+    });
+  }
+
+  if (finalLanguages.length === 0) return null;
 
   return (
     <div className="mb-6">
@@ -227,7 +242,7 @@ const LanguageBreakdown: React.FC<{ files: Array<{ name: string; size: number; c
       
       {/* Language bar */}
       <div className="flex h-2 rounded-full overflow-hidden bg-gray-100 mb-3">
-        {sortedLanguages.map(({ language, percentage }) => (
+        {finalLanguages.map(({ language, percentage }) => (
           <div
             key={language}
             className="transition-all duration-200 hover:opacity-80"
@@ -242,7 +257,7 @@ const LanguageBreakdown: React.FC<{ files: Array<{ name: string; size: number; c
 
       {/* Language legend */}
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-        {sortedLanguages.map(({ language, percentage }) => (
+        {finalLanguages.map(({ language, percentage }) => (
           <div key={language} className="flex items-center">
             <div
               className="w-3 h-3 rounded-full mr-1.5"
