@@ -38,7 +38,25 @@ export const FileTypeTooltip: React.FC<FileTypeTooltipProps> = ({
   const description = getFileTypeDescription(fileType);
   
   if (!description) {
-    return <>{children}</>;
+    // Fallback for missing descriptions
+    const fallbackDescription: FileTypeDescription = {
+      category: fileType,
+      title: fileType,
+      description: `Files categorized as ${fileType} type.`,
+      examples: [`Example ${fileType.toLowerCase()} file`],
+      importance: 'Varies based on file purpose'
+    };
+    
+    return (
+      <Tooltip
+        content={<TooltipContent description={fallbackDescription} />}
+        position={position}
+        maxWidth="400px"
+        delay={300}
+      >
+        {children}
+      </Tooltip>
+    );
   }
 
   return (

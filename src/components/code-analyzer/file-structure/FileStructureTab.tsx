@@ -110,6 +110,7 @@ export const FileStructureTab: React.FC<FileStructureTabProps> = ({ files, total
           totalFunctions={totalFunctions}
           totalComponents={totalComponents}
           totalImportedFiles={totalImportedFiles}
+          files={files}
         />
       </div>
     </div>

@@ -30,7 +30,34 @@ export const isRelevantSourceFile = (file: FileData): boolean => {
   ];
   const ext = file.path.split('.').pop()?.toLowerCase();
   const allowedExts = [
-    'js', 'jsx', 'ts', 'tsx', 'json', 'css', 'scss', 'md', 'mjs', 'cjs', 'env', 'local', 'gitignore', 'prisma', 'yml', 'yaml'
+    // JavaScript/TypeScript
+    'js', 'jsx', 'ts', 'tsx', 'mjs', 'cjs',
+    // Web Technologies  
+    'html', 'htm', 'css', 'scss', 'sass', 'less', 'styl',
+    // Database/Query Languages
+    'sql', 'psql', 'pgsql', 'plsql', 'tsql', 'mysql', 'sqlite', 'graphql', 'gql',
+    // Backend Languages
+    'py', 'java', 'php', 'rb', 'go', 'rs', 'cs', 'cpp', 'cc', 'cxx', 'c', 'h',
+    // Mobile Development
+    'dart', 'swift', 'kt', 'm', 'mm',
+    // Functional Languages
+    'r', 'lua', 'perl', 'pl', 'pm', 'scala', 'clj', 'cljs', 'ex', 'exs', 'erl', 'hs', 'fs', 'ml',
+    // Template Engines
+    'hbs', 'mustache', 'pug', 'jade', 'ejs', 'liquid', 'twig', 'j2',
+    // Framework Files
+    'vue', 'svelte',
+    // Scripting
+    'sh', 'bash', 'ps1', 'bat', 'cmd',
+    // Shaders
+    'hlsl', 'glsl', 'vert', 'frag',
+    // Protocol/Interface Definition
+    'proto', 'thrift',
+    // Data/Config
+    'json', 'xml', 'yml', 'yaml', 'toml',
+    // Documentation
+    'md', 'txt', 'rst',
+    // Environment/Config
+    'env', 'local', 'gitignore', 'prisma'
   ];
   
   // Important configuration files that start with dots
