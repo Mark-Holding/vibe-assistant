@@ -4,7 +4,7 @@ import FunctionsAnalysisSection from './FunctionsAnalysisSection';
 import ComponentsAnalysisSection from './ComponentsAnalysisSection';
 import AlgorithmsSection from './AlgorithmsSection';
 import DataFlowSection from './DataFlowSection';
-import { Code, Loader2, RefreshCw } from 'lucide-react';
+import { Code, Loader2, RefreshCw, Zap } from 'lucide-react';
 import {
   FunctionInfo,
   ComponentInfo,
@@ -61,7 +61,7 @@ const CodeAnalysisTab: React.FC<CodeAnalysisTabProps & { projectId: string }> = 
       // Transform database data to UI format
       const transformedFunctions: FunctionInfo[] = functionsData.map(func => ({
         name: func.name,
-        file: func.file_id, // Will need to resolve this to file path
+        file: (func as any).files?.relative_path || func.file_id, // Use joined file path if available
         line: func.line_number,
         purpose: func.purpose,
         type: func.function_type,
@@ -70,7 +70,7 @@ const CodeAnalysisTab: React.FC<CodeAnalysisTabProps & { projectId: string }> = 
 
       const transformedComponents: ComponentInfo[] = componentsData.map(comp => ({
         name: comp.name,
-        file: comp.file_id, // Will need to resolve this to file path
+        file: (comp as any).files?.relative_path || comp.file_id, // Use joined file path if available
         purpose: comp.purpose,
         props: comp.props,
         dependencies: comp.dependencies,
@@ -79,7 +79,7 @@ const CodeAnalysisTab: React.FC<CodeAnalysisTabProps & { projectId: string }> = 
 
       const transformedAlgorithms: AlgorithmInfo[] = algorithmsData.map(algo => ({
         name: algo.name,
-        file: algo.file_id, // Will need to resolve this to file path
+        file: (algo as any).files?.relative_path || algo.file_id, // Use joined file path if available
         line: algo.line_number,
         purpose: algo.purpose,
         complexity: algo.complexity,
@@ -156,10 +156,17 @@ const CodeAnalysisTab: React.FC<CodeAnalysisTabProps & { projectId: string }> = 
     // Load existing analysis data
     loadAnalysisData();
     
-    // Check if analysis is in progress
+    // Check if analysis is currently running (on initial load)
     checkAnalysisProgress();
-    
-    // Poll for progress updates every 5 seconds if analysis is ongoing
+  }, [files, projectId]);
+
+  // Separate effect for polling - only when analysis is actually in progress
+  useEffect(() => {
+    if (!analysisProgress || analysisProgress.isComplete) {
+      return;
+    }
+
+    // Poll for progress updates every 5 seconds only if analysis is ongoing
     const progressInterval = setInterval(() => {
       checkAnalysisProgress();
     }, 5000);
@@ -167,12 +174,37 @@ const CodeAnalysisTab: React.FC<CodeAnalysisTabProps & { projectId: string }> = 
     return () => {
       clearInterval(progressInterval);
     };
-  }, [files, projectId]);
+  }, [analysisProgress]);
 
   // Manual refresh
   const handleRefresh = () => {
     loadAnalysisData();
     checkAnalysisProgress();
+  };
+
+  // Start new analysis
+  const handleStartAnalysis = async () => {
+    try {
+      const response = await fetch('/api/start-analysis', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          projectId: projectId
+        }),
+      });
+
+      if (response.ok) {
+        // Start checking progress immediately
+        checkAnalysisProgress();
+      } else {
+        setLoadingError('Failed to start analysis');
+      }
+    } catch (error) {
+      console.error('Error starting analysis:', error);
+      setLoadingError('Failed to start analysis');
+    }
   };
 
   if (files.length === 0) {
@@ -187,38 +219,65 @@ const CodeAnalysisTab: React.FC<CodeAnalysisTabProps & { projectId: string }> = 
   }
 
   // Show analysis progress if analysis is ongoing
-  const showProgress = analysisProgress && !analysisProgress.isComplete;
+  const showProgress = Boolean(analysisProgress && !analysisProgress.isComplete);
 
   return (
     <div className="space-y-6">
       {/* Analysis Progress Banner */}
       {showProgress && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg p-6 shadow-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <Loader2 size={20} className="animate-spin text-blue-600 mr-3" />
-              <div>
-                <h4 className="font-medium text-blue-900">Claude Analysis in Progress</h4>
-                <p className="text-sm text-blue-700">
-                  Analyzing {analysisProgress.currentFile || 'project files'}... 
-                  ({analysisProgress.completedFiles}/{analysisProgress.totalFiles} files completed)
+              <div className="flex-shrink-0">
+                <Loader2 size={24} className="animate-spin text-blue-600 mr-4" />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-lg font-semibold text-blue-900 mb-1">
+                  🤖 Claude AI Analysis in Progress
+                </h4>
+                <p className="text-blue-700 mb-2">
+                  Processing your codebase to identify functions, components, algorithms, and patterns...
+                </p>
+                <div className="flex items-center space-x-4 text-sm">
+                  <span className="text-blue-600 font-medium">
+                    📁 Current: {analysisProgress?.currentFile ? 
+                      analysisProgress.currentFile.split('/').pop() : 
+                      'Preparing files...'
+                    }
+                  </span>
+                  <span className="text-blue-600">
+                    📊 Progress: {analysisProgress?.completedFiles || 0}/{analysisProgress?.totalFiles || 0} files
+                  </span>
+                  <span className="text-blue-600">
+                    ⏱️ ETA: ~{Math.max(1, Math.ceil(((analysisProgress?.totalFiles || 0) - (analysisProgress?.completedFiles || 0)) * 1.5))} min
+                  </span>
+                </div>
+              </div>
+            </div>
+                          <div className="text-right">
+                <div className="text-2xl font-bold text-blue-600 mb-2">
+                  {Math.round(((analysisProgress?.completedFiles || 0) / (analysisProgress?.totalFiles || 1)) * 100)}%
+                </div>
+                <div className="w-40 bg-blue-200 rounded-full h-3">
+                  <div 
+                    className="bg-gradient-to-r from-blue-500 to-indigo-600 h-3 rounded-full transition-all duration-500 ease-out"
+                    style={{ 
+                      width: `${((analysisProgress?.completedFiles || 0) / (analysisProgress?.totalFiles || 1)) * 100}%` 
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-blue-500 mt-1">Claude API Processing</p>
+              </div>
+            </div>
+            
+            {/* Error display if any */}
+            {analysisProgress?.errors && analysisProgress.errors.length > 0 && (
+              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                <p className="text-sm text-yellow-700">
+                  ⚠️ {analysisProgress.errors.length} file(s) had analysis issues (analysis continuing...)
                 </p>
               </div>
-            </div>
-            <div className="text-right">
-              <div className="text-sm text-blue-600 font-medium">
-                {Math.round((analysisProgress.completedFiles / analysisProgress.totalFiles) * 100)}%
-              </div>
-              <div className="w-32 bg-blue-200 rounded-full h-2 mt-1">
-                <div 
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                  style={{ 
-                    width: `${(analysisProgress.completedFiles / analysisProgress.totalFiles) * 100}%` 
-                  }}
-                />
-              </div>
-            </div>
-          </div>
+            )}
         </div>
       )}
 
@@ -249,16 +308,27 @@ const CodeAnalysisTab: React.FC<CodeAnalysisTabProps & { projectId: string }> = 
       <AlgorithmsSection algorithms={algorithms} />
       <DataFlowSection dataFlow={dataFlow} />
 
-      {/* Refresh Button */}
-      <div className="flex justify-center">
+      {/* Action Buttons */}
+      <div className="flex justify-center space-x-4">
         <button
           onClick={handleRefresh}
-          disabled={isLoading}
+          disabled={isLoading || showProgress}
           className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
         >
           <RefreshCw size={16} className={`mr-2 ${isLoading ? 'animate-spin' : ''}`} />
           Refresh Analysis
         </button>
+        
+        {!showProgress && (
+          <button
+            onClick={handleStartAnalysis}
+            disabled={isLoading}
+            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+          >
+            <Zap size={16} className="mr-2" />
+            Start New Analysis
+          </button>
+        )}
       </div>
     </div>
   );

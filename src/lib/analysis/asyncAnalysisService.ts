@@ -134,7 +134,7 @@ export class AsyncAnalysisService {
           file_id: fileId,
           project_id: projectId,
           name: func.name,
-          line_number: func.line,
+          line_number: func.line || 1, // Fallback to 1 if line is null/undefined
           purpose: func.purpose,
           function_type: func.type,
           complexity: func.complexity
@@ -162,7 +162,7 @@ export class AsyncAnalysisService {
           file_id: fileId,
           project_id: projectId,
           name: algo.name,
-          line_number: algo.line,
+          line_number: algo.line || 1, // Fallback to 1 if line is null/undefined
           purpose: algo.purpose,
           complexity: algo.complexity,
           implementation: algo.implementation

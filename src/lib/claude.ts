@@ -44,7 +44,7 @@ export interface IndividualFileAnalysis {
     name: string;
     line: number;
     purpose: string;
-    complexity: 'Low' | 'Medium' | 'High';
+    complexity: 'O(1)' | 'O(log n)' | 'O(n)' | 'O(n log n)' | 'O(n²)' | 'O(n³)' | 'O(2^n)' | 'O(n!)';
     implementation: string;
   }[];
   isEntryPoint: boolean;
@@ -179,9 +179,9 @@ Please analyze this file and return a JSON response with the following structure
   "functions": [
     {
       "name": "function_name",
-      "line": 42, // line number where function is defined
+      "line": 42, // REQUIRED: line number where function is defined (never null, estimate if needed)
       "purpose": "what this function does",
-      "type": "function_type", // e.g., "React Component", "API Handler", "Utility Function", "Hook", "Class Method"
+      "type": "function_type", // Use EXACT classification criteria below
       "complexity": "Low" | "Medium" | "High" // based on cyclomatic complexity and logic
     }
   ],
@@ -199,7 +199,7 @@ Please analyze this file and return a JSON response with the following structure
       "name": "algorithm_or_logic_name",
       "line": 15,
       "purpose": "description of the algorithm or complex logic",
-      "complexity": "Low" | "Medium" | "High",
+      "complexity": "O(1)" | "O(log n)" | "O(n)" | "O(n log n)" | "O(n²)" | "O(n³)" | "O(2^n)" | "O(n!)",
       "implementation": "brief description of how it works"
     }
   ],
@@ -219,14 +219,109 @@ Please analyze this file and return a JSON response with the following structure
   ]
 }
 
-Analysis Guidelines:
-- For FUNCTIONS: Identify all functions, methods, hooks, and components
-- For COMPONENTS: Focus on React components, their props, and what they render
-- For ALGORITHMS: Look for complex logic, sorting, searching, data processing, calculations
-- For ENTRY POINTS: Determine if this file is a main entry point (pages, API routes, main app files)
-- For DATA FLOWS: Identify how data moves within this file (props passing, state updates, API calls)
+CRITICAL: Use EXACT function type classification based on these criteria:
 
-Return ONLY the JSON response, no other text.`;
+**"API Handler"** - ONLY for server-side functions that process HTTP requests:
+- Functions in /api routes (Next.js API routes)
+- Express route handlers (app.get, app.post, etc.)
+- Functions with (req, res) parameters
+- Server-side request processing functions
+
+**"Event Handler"** - Client-side functions that respond to user interactions:
+- onClick, onSubmit, onChange handlers
+- ANY function starting with "handle" prefix (handleClick, handleSubmit, handleRemove, etc.) - ALWAYS classify as Event Handler
+- React event handling functions
+- User interaction response functions
+- Remove/delete handlers, form handlers, UI state changers
+
+**"React Component"** - Components that render JSX:
+- Functions returning JSX elements
+- Functional components with props
+- Components using hooks
+
+**"Hook"** - React hooks:
+- Functions starting with "use" prefix
+- Custom React hooks
+- State and effect management functions
+
+**"Utility Function"** - General helper functions:
+- Pure functions with calculations
+- Data transformation functions
+- Helper utilities without UI or events
+
+**"Class Method"** - Methods inside classes:
+- Methods defined within class definitions
+- Instance or static methods
+
+**"Async Function"** - For complex async operations:
+- Database operations, API calls as main purpose
+- File system operations
+- Complex asynchronous workflows
+
+EXAMPLES:
+- "const handleCreateProject = async () => { ... }" → "Event Handler" (handles user action)
+- "const handleRemove = (item: string) => { ... }" → "Event Handler" (ANY handle* function)
+- "const handleSubmit = () => { ... }" → "Event Handler" (handle* prefix = Event Handler)
+- "export default function GET(req, res) { ... }" → "API Handler" (processes HTTP request)
+- "function validateEmail(email) { ... }" → "Utility Function" (pure helper)
+- "const useAuth = () => { ... }" → "Hook" (custom React hook)
+
+CRITICAL RULES:
+1. If function name starts with "handle", it is ALWAYS "Event Handler" regardless of content.
+2. ALWAYS provide a valid line number - never use null. If line number is unclear, provide best estimate (e.g., 1, 10, 20).
+
+COMPLEXITY CLASSIFICATION:
+- **"Low"**: Simple functions with 1-5 lines, basic conditionals, straightforward logic
+- **"Medium"**: Functions with 6-20 lines, multiple conditionals, loops, moderate logic  
+- **"High"**: Functions with 20+ lines, nested loops, complex conditionals, multiple responsibilities
+
+ALGORITHMS - Only include if function contains actual algorithmic logic:
+- Sorting/filtering algorithms (not simple array.filter)
+- Mathematical calculations or formulas
+- Complex data transformations with multiple steps
+- Search algorithms, tree/graph traversal
+- Recursive functions with complex logic
+- EXCLUDE: Simple loops, basic array operations, basic conditionals
+
+ALGORITHM COMPLEXITY - Use Big O notation based on actual algorithmic analysis:
+- **O(1)**: Constant time - direct access, simple calculations
+- **O(log n)**: Logarithmic - binary search, balanced tree operations
+- **O(n)**: Linear - single loop through data, linear search
+- **O(n log n)**: Log-linear - efficient sorting (merge sort, quick sort average case)
+- **O(n²)**: Quadratic - nested loops, bubble sort, simple graph algorithms
+- **O(n³)**: Cubic - triple nested loops, matrix multiplication
+- **O(2^n)**: Exponential - recursive algorithms with overlapping subproblems
+- **O(n!)**: Factorial - permutation generation, traveling salesman brute force
+
+COMPONENTS - React components that render UI:
+- Must return JSX/React elements
+- Include functional components, class components
+- Include HOCs (Higher Order Components) that return components
+- EXCLUDE: Utility functions that happen to return JSX
+
+DATA FLOWS - Only include clear, meaningful data movements:
+- Props passed between parent/child components
+- State updates that affect other functions/components
+- API calls that populate component state
+- Event data passed to handlers
+- EXCLUDE: Internal variable assignments, basic function calls
+
+ENTRY POINTS - Files that serve as application entry points:
+- Next.js pages (pages/*.tsx, app/*.tsx)
+- API routes (pages/api/*, app/api/*)
+- Main application files (_app.tsx, layout.tsx, main.tsx)
+- Root components or configuration files
+- EXCLUDE: Regular components, utility files, types
+
+Analysis Guidelines:
+- For FUNCTIONS: Focus on HOW the function is USED, not just what it contains
+- For COMPONENTS: Must return JSX - if it doesn't render UI, it's not a component
+- For ALGORITHMS: Be selective - only include genuine algorithmic logic, not basic operations
+- For ENTRY POINTS: Only files that are actual application entry points
+- For DATA FLOWS: Only include flows that cross function/component boundaries
+- For COMPLEXITY: Use line count + logic complexity as primary indicators
+
+CRITICAL: Return ONLY the JSON response, no other text. No explanations, no markdown, no code blocks, no additional text before or after the JSON. Start your response with { and end with }.`;
 
     const response = await anthropic.messages.create({
       model: 'claude-3-5-sonnet-20241022',
@@ -244,8 +339,30 @@ Return ONLY the JSON response, no other text.`;
       throw new Error('Unexpected response type from Claude');
     }
 
-    // Parse Claude's JSON response
-    const analysisResult = JSON.parse(content.text);
+    // Log raw response for debugging
+    console.log(`📄 Raw Claude response for ${file.path}:`, content.text.substring(0, 200) + '...');
+
+    // Robust JSON parsing with fallback
+    let analysisResult;
+    try {
+      // Try to extract JSON from response (in case Claude adds extra text)
+      const jsonMatch = content.text.match(/\{[\s\S]*\}/);
+      const jsonString = jsonMatch ? jsonMatch[0] : content.text;
+      
+      analysisResult = JSON.parse(jsonString);
+    } catch (parseError) {
+      console.error(`❌ JSON parse error for ${file.path}:`, parseError);
+      console.error(`📄 Full Claude response:`, content.text);
+      
+      // Return empty analysis instead of throwing
+      return {
+        functions: [],
+        components: [],
+        algorithms: [],
+        isEntryPoint: false,
+        dataFlows: []
+      };
+    }
     
     return {
       functions: analysisResult.functions || [],

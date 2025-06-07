@@ -31,7 +31,7 @@ export interface AlgorithmAnalysis {
   name: string;
   line_number: number;
   purpose: string;
-  complexity: 'Low' | 'Medium' | 'High';
+  complexity: 'O(1)' | 'O(log n)' | 'O(n)' | 'O(n log n)' | 'O(n²)' | 'O(n³)' | 'O(2^n)' | 'O(n!)';
   implementation: string;
   created_at?: string;
 }
@@ -77,7 +77,10 @@ export const codeAnalysisService = {
   async getFunctionAnalysis(projectId: string): Promise<FunctionAnalysis[]> {
     const { data, error } = await supabase
       .from('function_analysis')
-      .select('*')
+      .select(`
+        *,
+        files!inner(name, relative_path)
+      `)
       .eq('project_id', projectId)
       .order('name');
     
@@ -109,7 +112,10 @@ export const codeAnalysisService = {
   async getComponentAnalysis(projectId: string): Promise<ComponentAnalysis[]> {
     const { data, error } = await supabase
       .from('component_analysis')
-      .select('*')
+      .select(`
+        *,
+        files!inner(name, relative_path)
+      `)
       .eq('project_id', projectId)
       .order('name');
     
@@ -141,7 +147,10 @@ export const codeAnalysisService = {
   async getAlgorithmAnalysis(projectId: string): Promise<AlgorithmAnalysis[]> {
     const { data, error } = await supabase
       .from('algorithm_analysis')
-      .select('*')
+      .select(`
+        *,
+        files!inner(name, relative_path)
+      `)
       .eq('project_id', projectId)
       .order('name');
     
