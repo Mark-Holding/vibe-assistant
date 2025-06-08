@@ -61,9 +61,30 @@ export const codeAnalysisService = {
   async saveFunctionAnalysis(functions: FunctionAnalysis[]): Promise<void> {
     if (functions.length === 0) return;
     
+    // Remove duplicates based on the unique constraint (file_id, name, line_number)
+    const uniqueFunctions = functions.reduce((acc, func) => {
+      const key = `${func.file_id}-${func.name}-${func.line_number}`;
+      if (!acc.has(key)) {
+        acc.set(key, func);
+      } else {
+        // If duplicate, keep the one with more detailed purpose
+        const existing = acc.get(key)!;
+        if (func.purpose.length > existing.purpose.length) {
+          acc.set(key, func);
+        }
+      }
+      return acc;
+    }, new Map<string, FunctionAnalysis>());
+    
+    const deduplicatedFunctions = Array.from(uniqueFunctions.values());
+    
+    if (deduplicatedFunctions.length === 0) return;
+    
+    console.log(`💾 Saving ${deduplicatedFunctions.length} unique functions (removed ${functions.length - deduplicatedFunctions.length} duplicates)`);
+    
     const { error } = await supabase
       .from('function_analysis')
-      .upsert(functions, { 
+      .upsert(deduplicatedFunctions, { 
         onConflict: 'file_id,name,line_number',
         ignoreDuplicates: false 
       });
@@ -96,9 +117,30 @@ export const codeAnalysisService = {
   async saveComponentAnalysis(components: ComponentAnalysis[]): Promise<void> {
     if (components.length === 0) return;
     
+    // Remove duplicates based on the unique constraint (file_id, name)
+    const uniqueComponents = components.reduce((acc, comp) => {
+      const key = `${comp.file_id}-${comp.name}`;
+      if (!acc.has(key)) {
+        acc.set(key, comp);
+      } else {
+        // If duplicate, keep the one with more detailed purpose or more props
+        const existing = acc.get(key)!;
+        if (comp.purpose.length > existing.purpose.length || comp.props.length > existing.props.length) {
+          acc.set(key, comp);
+        }
+      }
+      return acc;
+    }, new Map<string, ComponentAnalysis>());
+    
+    const deduplicatedComponents = Array.from(uniqueComponents.values());
+    
+    if (deduplicatedComponents.length === 0) return;
+    
+    console.log(`💾 Saving ${deduplicatedComponents.length} unique components (removed ${components.length - deduplicatedComponents.length} duplicates)`);
+    
     const { error } = await supabase
       .from('component_analysis')
-      .upsert(components, { 
+      .upsert(deduplicatedComponents, { 
         onConflict: 'file_id,name',
         ignoreDuplicates: false 
       });
@@ -131,9 +173,30 @@ export const codeAnalysisService = {
   async saveAlgorithmAnalysis(algorithms: AlgorithmAnalysis[]): Promise<void> {
     if (algorithms.length === 0) return;
     
+    // Remove duplicates based on the unique constraint (file_id, name, line_number)
+    const uniqueAlgorithms = algorithms.reduce((acc, algo) => {
+      const key = `${algo.file_id}-${algo.name}-${algo.line_number}`;
+      if (!acc.has(key)) {
+        acc.set(key, algo);
+      } else {
+        // If duplicate, keep the one with more detailed implementation
+        const existing = acc.get(key)!;
+        if (algo.implementation.length > existing.implementation.length) {
+          acc.set(key, algo);
+        }
+      }
+      return acc;
+    }, new Map<string, AlgorithmAnalysis>());
+    
+    const deduplicatedAlgorithms = Array.from(uniqueAlgorithms.values());
+    
+    if (deduplicatedAlgorithms.length === 0) return;
+    
+    console.log(`💾 Saving ${deduplicatedAlgorithms.length} unique algorithms (removed ${algorithms.length - deduplicatedAlgorithms.length} duplicates)`);
+    
     const { error } = await supabase
       .from('algorithm_analysis')
-      .upsert(algorithms, { 
+      .upsert(deduplicatedAlgorithms, { 
         onConflict: 'file_id,name,line_number',
         ignoreDuplicates: false 
       });
@@ -166,9 +229,30 @@ export const codeAnalysisService = {
   async saveDataFlowAnalysis(dataFlows: DataFlowAnalysis[]): Promise<void> {
     if (dataFlows.length === 0) return;
     
+    // Remove duplicates based on the unique constraint (project_id, from_component, to_component)
+    const uniqueFlows = dataFlows.reduce((acc, flow) => {
+      const key = `${flow.project_id}-${flow.from_component}-${flow.to_component}`;
+      if (!acc.has(key)) {
+        acc.set(key, flow);
+      } else {
+        // If duplicate, keep the one with more detailed description
+        const existing = acc.get(key)!;
+        if (flow.description.length > existing.description.length) {
+          acc.set(key, flow);
+        }
+      }
+      return acc;
+    }, new Map<string, DataFlowAnalysis>());
+    
+    const deduplicatedFlows = Array.from(uniqueFlows.values());
+    
+    if (deduplicatedFlows.length === 0) return;
+    
+    console.log(`💾 Saving ${deduplicatedFlows.length} unique data flows (removed ${dataFlows.length - deduplicatedFlows.length} duplicates)`);
+    
     const { error } = await supabase
       .from('data_flow_analysis')
-      .upsert(dataFlows, { 
+      .upsert(deduplicatedFlows, { 
         onConflict: 'project_id,from_component,to_component',
         ignoreDuplicates: false 
       });
@@ -236,13 +320,22 @@ export const codeAnalysisService = {
       'component_analysis', 
       'algorithm_analysis',
       'data_flow_analysis',
-      'entry_point_analysis'
+      'entry_point_analysis',
+      // Design system tables
+      'colors',
+      'typography',
+      'spacing',
+      'component_styles'
     ];
+
+    console.log(`🗑️ Clearing analysis data for project ${projectId}`);
 
     await Promise.all(
       tables.map(table => 
         supabase.from(table).delete().eq('project_id', projectId)
       )
     );
+
+    console.log(`✅ Cleared all analysis data for project ${projectId}`);
   }
 }; 

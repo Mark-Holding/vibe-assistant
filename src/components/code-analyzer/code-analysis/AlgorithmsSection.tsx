@@ -1,5 +1,5 @@
-import React from 'react';
-import { Code } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Code, Search } from 'lucide-react';
 import { AlgorithmInfo } from '../../../types/code-analysis';
 import { Tooltip } from '../../ui/Tooltip';
 
@@ -72,6 +72,43 @@ const getBigOTooltipContent = (notation: string) => {
 };
 
 const AlgorithmsSection: React.FC<AlgorithmsSectionProps> = ({ algorithms }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedComplexity, setSelectedComplexity] = useState('all');
+
+  // Get unique complexity values for the filter dropdown
+  const complexityOptions = useMemo(() => {
+    const uniqueComplexities = Array.from(new Set(algorithms.map(algo => algo.complexity)));
+    return uniqueComplexities.sort((a, b) => {
+      // Sort by complexity order (better to worse)
+      const complexityOrder = ['O(1)', 'O(log n)', 'O(n)', 'O(n log n)', 'O(n²)', 'O(n³)', 'O(2^n)', 'O(n!)'];
+      return complexityOrder.indexOf(a) - complexityOrder.indexOf(b);
+    });
+  }, [algorithms]);
+
+  // Filter algorithms based on search term and complexity
+  const filteredAlgorithms = useMemo(() => {
+    let filtered = algorithms;
+    
+    // Filter by complexity
+    if (selectedComplexity !== 'all') {
+      filtered = filtered.filter(algo => algo.complexity === selectedComplexity);
+    }
+    
+    // Filter by search term
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(algo => 
+        algo.name.toLowerCase().includes(term) ||
+        algo.file.toLowerCase().includes(term) ||
+        algo.purpose.toLowerCase().includes(term) ||
+        algo.complexity.toLowerCase().includes(term) ||
+        algo.implementation.toLowerCase().includes(term)
+      );
+    }
+    
+    return filtered;
+  }, [algorithms, searchTerm, selectedComplexity]);
+
   // Color coding for Big O complexity
   const getComplexityColor = (complexity: string) => {
     switch (complexity) {
@@ -102,9 +139,38 @@ const AlgorithmsSection: React.FC<AlgorithmsSectionProps> = ({ algorithms }) => 
         <Code size={20} className="mr-2 text-green-600" />
         Algorithms & Logic
         <span className="ml-3 text-sm font-normal text-gray-500">
-          ({algorithms.length} algorithms)
+          ({filteredAlgorithms.length} of {algorithms.length} algorithms)
         </span>
+        <select
+          value={selectedComplexity}
+          onChange={(e) => setSelectedComplexity(e.target.value)}
+          className="ml-4 text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+        >
+          <option value="all">All Complexities</option>
+          {complexityOptions.map(complexity => {
+            const count = algorithms.filter(algo => algo.complexity === complexity).length;
+            return (
+              <option key={complexity} value={complexity}>
+                {complexity} ({count})
+              </option>
+            );
+          })}
+        </select>
       </h3>
+
+      {/* Search Bar */}
+      <div className="mb-4">
+        <div className="relative">
+          <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search algorithms by name, file, purpose, complexity, or implementation..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          />
+        </div>
+      </div>
 
       {/* Big O Legend */}
       <div className="mb-6 p-4 bg-gray-50 rounded-lg">
@@ -173,27 +239,42 @@ const AlgorithmsSection: React.FC<AlgorithmsSectionProps> = ({ algorithms }) => 
         </div>
       </div>
 
-      <div className="space-y-4">
-        {algorithms.map((algo, index) => (
-          <div key={index} className="border-l-4 border-green-400 pl-4">
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="font-medium">{algo.name}</h4>
-              <Tooltip
-                content={getBigOTooltipContent(algo.complexity)}
-                position="left"
-                maxWidth="320px"
-                delay={300}
-              >
-                <span className={`text-sm font-mono px-3 py-1 rounded border cursor-help hover:opacity-80 transition-opacity ${getComplexityColor(algo.complexity)}`}>
-                  {algo.complexity}
-                </span>
-              </Tooltip>
-            </div>
-            <p className="text-sm text-gray-600 mb-2">{algo.purpose}</p>
-            <p className="text-xs text-gray-500 mb-1">💡 {algo.implementation}</p>
-            <code className="text-xs bg-gray-100 px-2 py-1 rounded">{algo.file}:{algo.line}</code>
+      <div className="max-h-96 overflow-y-auto space-y-4">
+        {filteredAlgorithms.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <Search size={48} className="mx-auto mb-4 text-gray-300" />
+            {searchTerm || selectedComplexity !== 'all' ? (
+              <div>
+                <p>No algorithms found matching the current filters:</p>
+                {searchTerm && <p className="text-sm mt-1">Search: "{searchTerm}"</p>}
+                {selectedComplexity !== 'all' && <p className="text-sm mt-1">Complexity: {selectedComplexity}</p>}
+              </div>
+            ) : (
+              <p>No algorithms found</p>
+            )}
           </div>
-        ))}
+        ) : (
+          filteredAlgorithms.map((algo, index) => (
+            <div key={index} className="border-l-4 border-green-400 pl-4">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-medium">{algo.name}</h4>
+                <Tooltip
+                  content={getBigOTooltipContent(algo.complexity)}
+                  position="left"
+                  maxWidth="320px"
+                  delay={300}
+                >
+                  <span className={`text-sm font-mono px-3 py-1 rounded border cursor-help hover:opacity-80 transition-opacity ${getComplexityColor(algo.complexity)}`}>
+                    {algo.complexity}
+                  </span>
+                </Tooltip>
+              </div>
+              <p className="text-sm text-gray-600 mb-2">{algo.purpose}</p>
+              <p className="text-xs text-gray-500 mb-1">💡 {algo.implementation}</p>
+              <code className="text-xs bg-gray-100 px-2 py-1 rounded">{algo.file}:{algo.line}</code>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

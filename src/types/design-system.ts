@@ -32,4 +32,5 @@ export interface DesignSystemTabProps {
     size: number;
     file: File;
   }>;
+  projectId: string;
 } 

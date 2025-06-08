@@ -1,6 +1,8 @@
 import { analyzeIndividualFile, FileWithContent } from '../claude';
 import { codeAnalysisService } from '../database/codeAnalysis';
 import { fileService } from '../database/files';
+import { designSystemService } from '../database/designSystem';
+import { analyzeDesignSystem } from './designSystemExtractor';
 
 export interface AnalysisProgress {
   totalFiles: number;
@@ -97,6 +99,10 @@ export class AsyncAnalysisService {
           completedCount++; // Still count as completed to maintain progress
         }
       }
+
+      // After code analysis, analyze design system files
+      console.log(`🎨 Starting design system analysis...`);
+      await this.analyzeDesignSystemFiles(projectId, projectFiles);
 
       // Mark analysis as complete
       this.updateProgress(projectId, {
@@ -199,6 +205,125 @@ export class AsyncAnalysisService {
     } catch (error) {
       console.error(`❌ Failed to save analysis for ${filePath}:`, error);
       throw error;
+    }
+  }
+
+  // Analyze design system files (CSS, SCSS, etc.)
+  private async analyzeDesignSystemFiles(projectId: string, allFiles: any[]): Promise<void> {
+    try {
+      // Filter for design system files
+      const designFiles = allFiles.filter(file => {
+        const extension = file.extension?.toLowerCase() || '';
+        const path = file.relative_path?.toLowerCase() || '';
+        
+        // Include CSS/styling files
+        const isStyleFile = ['css', 'scss', 'sass', 'less', 'styl', 'stylus'].includes(extension);
+        
+        // Include JS/TS files that might contain CSS-in-JS or styled components
+        const isJSWithStyles = ['js', 'jsx', 'ts', 'tsx'].includes(extension) && 
+                              (path.includes('style') || path.includes('theme') || path.includes('global'));
+        
+        return (isStyleFile || isJSWithStyles) &&
+               !file.relative_path.includes('node_modules') &&
+               !file.relative_path.includes('.git') &&
+               !file.relative_path.includes('.next') &&
+               !file.relative_path.includes('dist');
+      });
+
+      console.log(`🎨 Found ${designFiles.length} design system files to analyze`);
+      
+      if (designFiles.length > 0) {
+        console.log(`📁 Design files found:`, designFiles.map(f => f.relative_path));
+      } else {
+        console.log(`⚠️ No design files found. All files:`, allFiles.slice(0, 10).map(f => ({
+          name: f.name,
+          extension: f.extension,
+          path: f.relative_path
+        })));
+      }
+      
+      if (designFiles.length > 0) {
+        console.log(`📁 Design files found:`, designFiles.map(f => f.relative_path));
+      } else {
+        console.log(`⚠️ No design files found. All files:`, allFiles.slice(0, 10).map(f => ({
+          name: f.name,
+          extension: f.extension,
+          path: f.relative_path
+        })));
+      }
+
+      if (designFiles.length === 0) {
+        console.log(`ℹ️ No design system files found to analyze`);
+        return;
+      }
+
+      // Collect all design system data
+      const allColors: any[] = [];
+      const allTypography: any[] = [];
+      const allSpacing: any[] = [];
+      const allComponentStyles: any[] = [];
+
+      for (const file of designFiles) {
+        console.log(`🎨 Analyzing design file: ${file.relative_path}`);
+
+        // Get file content
+        const fileContent = await fileService.getFileContent(file.id);
+        if (!fileContent) {
+          console.warn(`⚠️ No content found for design file ${file.relative_path}`);
+          continue;
+        }
+
+        console.log(`📝 File content length: ${fileContent.length} characters`);
+
+        // Extract design system data
+        const designSystemData = analyzeDesignSystem(projectId, file.relative_path, fileContent);
+        
+        console.log(`✨ Extracted from ${file.relative_path}:`, {
+          colors: designSystemData.colors.length,
+          typography: designSystemData.typography.length,
+          spacing: designSystemData.spacing.length,
+          componentStyles: designSystemData.componentStyles.length
+        });
+        
+        allColors.push(...designSystemData.colors);
+        allTypography.push(...designSystemData.typography);
+        allSpacing.push(...designSystemData.spacing);
+        allComponentStyles.push(...designSystemData.componentStyles);
+      }
+
+      console.log(`🎯 Total extracted across all files:`, {
+        colors: allColors.length,
+        typography: allTypography.length,
+        spacing: allSpacing.length,
+        componentStyles: allComponentStyles.length
+      });
+
+      // Save to database
+      if (allColors.length > 0) {
+        console.log(`💾 Saving ${allColors.length} colors to database`);
+        await designSystemService.saveColors(allColors);
+      }
+
+      if (allTypography.length > 0) {
+        console.log(`💾 Saving ${allTypography.length} typography entries to database`);
+        await designSystemService.saveTypography(allTypography);
+      }
+
+      if (allSpacing.length > 0) {
+        console.log(`💾 Saving ${allSpacing.length} spacing values to database`);
+        await designSystemService.saveSpacing(allSpacing);
+      }
+
+      if (allComponentStyles.length > 0) {
+        console.log(`💾 Saving ${allComponentStyles.length} component styles to database`);
+        await designSystemService.saveComponentStyles(allComponentStyles);
+      }
+
+      console.log(`✅ Design system analysis complete`);
+
+    } catch (error) {
+      console.error(`❌ Failed to analyze design system files:`, error);
+      // Don't throw here - we don't want design system errors to fail the entire analysis
     }
   }
 

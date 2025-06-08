@@ -55,6 +55,7 @@ export interface FileNode {
   fileType?: string;
   functions?: number;
   path: string;
+  color?: string;
 }
 
 export interface FileTypeData {

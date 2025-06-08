@@ -540,28 +540,28 @@ export const DependencyVisualizer: React.FC<DependencyVisualizerProps> = ({ file
           </div>
       <div className="absolute top-4 right-4 flex space-x-2">
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
           onClick={() => setZoom(z => Math.min(z + 0.1, 2))}
         >
           <ZoomIn size={16} />
         </Button>
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
           onClick={() => setZoom(z => Math.max(z - 0.1, 0.5))}
         >
           <ZoomOut size={16} />
         </Button>
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
           onClick={() => setZoom(1)}
         >
           <RotateCcw size={16} />
         </Button>
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
               onClick={exportGraphData}
         >

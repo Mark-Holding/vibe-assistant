@@ -97,7 +97,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
                 {totalPages > 1 && (
                   <div className="flex items-center justify-between mt-4 px-2">
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       onClick={() => handlePageChange(currentPage - 1)}
                       disabled={currentPage === 1}
                     >
@@ -107,7 +107,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
                       Page {currentPage} of {totalPages}
                     </span>
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       onClick={() => handlePageChange(currentPage + 1)}
                       disabled={currentPage === totalPages}
                     >

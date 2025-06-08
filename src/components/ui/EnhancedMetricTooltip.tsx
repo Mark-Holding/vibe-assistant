@@ -117,7 +117,7 @@ export const EnhancedMetricTooltip: React.FC<EnhancedMetricTooltipProps> = ({
             </div>
             <div className="flex justify-between">
               <span className="text-red-600">Bad:</span>
-              <span className="font-mono">> {description.thresholds.warning}</span>
+              <span className="font-mono">&gt; {description.thresholds.warning}</span>
             </div>
           </div>
         </div>

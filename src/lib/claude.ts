@@ -119,9 +119,9 @@ Focus on files that:
 Return ONLY the JSON response, no other text.`;
 
     console.log('🤖 Sending request to Claude...');
-    
+
     const response = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-3-5-haiku-20241022',
       max_tokens: 4000,
       messages: [
         {
@@ -211,9 +211,9 @@ Please analyze this file and return a JSON response with the following structure
   },
   "dataFlows": [
     {
-      "from": "source_component_or_function",
-      "to": "destination_component_or_function", 
-      "type": "Props" | "State" | "API Call" | "Event" | "Function Call",
+      "from": "actual_component_name_or_FileName > functionName", // USE REAL NAMES from code, not "Parent Component"
+      "to": "actual_component_name_or_FileName > functionName", // USE REAL NAMES from code, not "Child Component"
+      "type": "Props" | "State" | "API Call" | "Event" | "Function Call" | "Configuration" | "Data" | "Hook" | "Ref" | "Route" | "Storage",
       "description": "description of data flow"
     }
   ]
@@ -306,6 +306,22 @@ DATA FLOWS - Only include clear, meaningful data movements:
 - Event data passed to handlers
 - EXCLUDE: Internal variable assignments, basic function calls
 
+CRITICAL DATA FLOW NAMING RULES:
+- Use ACTUAL component/function names from the code, not generic names
+- If actual name isn't clear, use descriptive format: "FileName > ComponentName" or "FileName > functionName"
+- NEVER use generic names like "Parent Component", "Child Component", "Main Component"
+- Examples of GOOD naming:
+  * "UserProfile > handleSubmit" → "AuthForm > validateUser"
+  * "route.ts > POST" → "route.ts > GET"
+  * "LoginForm" → "UserService > authenticate"
+  * "Dashboard > UserCard" → "Header > Navigation"
+- Examples of BAD naming (DO NOT USE):
+  * "Parent Component" → "Child Component"
+  * "Main Component" → "Sub Component"
+  * "Container" → "Content"
+- Use the ">" symbol to clearly show something is INSIDE a file
+- Include file path context when component names alone aren't descriptive enough
+
 ENTRY POINTS - Files that serve as application entry points:
 - Next.js pages (pages/*.tsx, app/*.tsx)
 - API routes (pages/api/*, app/api/*)
@@ -324,7 +340,7 @@ Analysis Guidelines:
 CRITICAL: Return ONLY the JSON response, no other text. No explanations, no markdown, no code blocks, no additional text before or after the JSON. Start your response with { and end with }.`;
 
     const response = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-3-5-haiku-20241022',
       max_tokens: 4000,
       messages: [
         {

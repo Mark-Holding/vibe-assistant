@@ -12,60 +12,109 @@ import {
   ComponentStyleInfo,
   DesignSystemTabProps
 } from '../../../types/design-system';
+import { designSystemService, ColorData, TypographyData, SpacingData, ComponentStyleData } from '../../../lib/database/designSystem';
 
-const DesignSystemTab: React.FC<DesignSystemTabProps> = ({ files }) => {
+const DesignSystemTab: React.FC<DesignSystemTabProps> = ({ files, projectId }) => {
   const [colors, setColors] = useState<ColorInfo[]>([]);
   const [typography, setTypography] = useState<TypographyInfo[]>([]);
   const [spacing, setSpacing] = useState<SpacingInfo[]>([]);
   const [componentStyles, setComponentStyles] = useState<ComponentStyleInfo[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Dummy data for now
+  // Helper function to transform database data to UI format
+  const transformColorData = (colorData: ColorData[]): ColorInfo[] => {
+    return colorData.map(color => ({
+      name: color.name,
+      hex: color.hex_value,
+      usage: color.usage_count,
+      locations: color.locations
+    }));
+  };
+
+  const transformTypographyData = (typographyData: TypographyData[]): TypographyInfo[] => {
+    return typographyData.map(typo => ({
+      name: typo.name,
+      family: typo.font_family,
+      weight: typo.font_weights.join(', ') || 'Unknown',
+      usage: typo.usage_description || `Used in ${typo.locations.join(', ')}`
+    }));
+  };
+
+  const transformSpacingData = (spacingData: SpacingData[]): SpacingInfo[] => {
+    return spacingData.map(space => ({
+      size: space.size_value,
+      pixels: space.pixels,
+      usage: space.usage_description || `Used ${space.usage_count} times`
+    }));
+  };
+
+  const transformComponentStyleData = (componentStyleData: ComponentStyleData[]): ComponentStyleInfo[] => {
+    return componentStyleData.map(style => ({
+      name: style.name,
+      variants: style.variants.length,
+      usage: style.usage_description || `${style.style_type} component styles`
+    }));
+  };
+
+  // Load design system data from database
   useEffect(() => {
-    if (files.length === 0) {
+    if (!projectId) {
       setColors([]);
       setTypography([]);
       setSpacing([]);
       setComponentStyles([]);
       return;
     }
-    setIsLoading(true);
-    setTimeout(() => {
-      setColors([
-        { name: 'Primary Blue', hex: '#3b82f6', usage: 12, locations: ['main.css', 'button.css'] },
-        { name: 'Success Green', hex: '#10b981', usage: 8, locations: ['main.css'] },
-        { name: 'Error Red', hex: '#ef4444', usage: 5, locations: ['alerts.css'] },
-        { name: 'Text Gray', hex: '#374151', usage: 20, locations: ['main.css', 'typography.css'] },
-        { name: 'Background Light', hex: '#f9fafb', usage: 15, locations: ['main.css'] }
-      ]);
-      setTypography([
-        { name: 'Primary Font', family: 'Inter', weight: '400-700', usage: 'Headers, body text, UI elements' },
-        { name: 'Monospace Font', family: 'Fira Code, monospace', weight: '400', usage: 'Code blocks, technical text' }
-      ]);
-      setSpacing([
-        { size: '4px', pixels: 4, usage: 'Tiny gaps, fine details' },
-        { size: '8px', pixels: 8, usage: 'Small spacing, icons' },
-        { size: '16px', pixels: 16, usage: 'Standard spacing' },
-        { size: '32px', pixels: 32, usage: 'Large spacing' }
-      ]);
-      setComponentStyles([
-        { name: 'Button Styles', variants: 3, usage: 'Primary, secondary, outline variants' },
-        { name: 'Card Styles', variants: 2, usage: 'Content containers, product cards' },
-        { name: 'Form Styles', variants: 2, usage: 'Input fields, form controls' }
-      ]);
-      setIsLoading(false);
-    }, 500);
-  }, [files]);
+
+    const loadDesignSystemData = async () => {
+      setIsLoading(true);
+      try {
+        console.log('📊 Loading design system data from database...');
+        
+        const designSystemData = await designSystemService.getAllDesignSystemData(projectId);
+        
+        setColors(transformColorData(designSystemData.colors));
+        setTypography(transformTypographyData(designSystemData.typography));
+        setSpacing(transformSpacingData(designSystemData.spacing));
+        setComponentStyles(transformComponentStyleData(designSystemData.componentStyles));
+
+        console.log('✅ Design system data loaded:', {
+          colors: designSystemData.colors.length,
+          typography: designSystemData.typography.length,
+          spacing: designSystemData.spacing.length,
+          componentStyles: designSystemData.componentStyles.length
+        });
+
+      } catch (error) {
+        console.error('❌ Error loading design system data:', error);
+        // Fall back to empty arrays
+        setColors([]);
+        setTypography([]);
+        setSpacing([]);
+        setComponentStyles([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadDesignSystemData();
+  }, [projectId]);
 
   const cssFiles = files.filter(file => file.name.match(/\.(css|scss|sass)$/));
+  const hasDesignSystemData = colors.length > 0 || typography.length > 0 || spacing.length > 0 || componentStyles.length > 0;
 
-  if (cssFiles.length === 0) {
+  if (!hasDesignSystemData && !isLoading) {
     return (
       <div className="flex items-center justify-center h-64 text-gray-500">
         <div className="text-center">
           <Palette size={48} className="mx-auto mb-4 text-gray-300" />
-          <p>No CSS files found</p>
-          <p className="text-sm">Upload CSS/SCSS files to analyze your design system</p>
+          <p>No design system data found</p>
+          <p className="text-sm">
+            {cssFiles.length === 0 
+              ? "Upload CSS/SCSS files to analyze your design system"
+              : "Run a new analysis to extract design system data from your CSS files"
+            }
+          </p>
         </div>
       </div>
     );

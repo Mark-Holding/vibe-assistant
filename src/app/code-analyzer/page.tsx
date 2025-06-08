@@ -339,7 +339,7 @@ export default function CodeAnalyzerPage() {
             </div>
           ) : activeTab === "designSystem" ? (
             <div className="w-full">
-              <DesignSystemTab files={filteredFiles} />
+              <DesignSystemTab files={filteredFiles} projectId={currentProjectId} />
             </div>
           ) : null}
         </div>
